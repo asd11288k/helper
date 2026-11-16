@@ -4,7 +4,7 @@
 # 产物名: doubao.apk -> helper.apk；仓库地址 xiao-zhushou -> helper；版本 1.1.23 / code 16
 # 有意保留项（断言其存在）：Providers 豆包模型 id、keystore 内部凭证(别名/密码)。
 import os, re, sys
-ROOT = '/data/user/0/com.ai.assistance.operit/files/workspace/doubao/'
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/'
 MAN = open(ROOT + 'android-app/AndroidManifest.xml', encoding='utf-8').read()
 BUILD = open(ROOT + 'android-app/build.sh', encoding='utf-8').read()
 GW = open(ROOT + 'android-app/src/com/helper/app/LocalGateway.java', encoding='utf-8').read()
