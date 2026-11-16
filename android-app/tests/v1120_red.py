@@ -8,7 +8,8 @@
 # #6 拉取模型错乱修复（以文本框 names 为唯一真相）
 # #7 渠道表单键盘透层加固（openChannelForm 隐藏下层 settingsPage）
 import re, sys
-ROOT = '/data/user/0/com.ai.assistance.operit/files/workspace/doubao/'
+import os
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/'
 HTML = open(ROOT + 'index.html', encoding='utf-8').read()
 MAN = open(ROOT + 'android-app/AndroidManifest.xml', encoding='utf-8').read()
 SK = open(ROOT + 'android-app/src/com/helper/app/Skills.java', encoding='utf-8').read()
@@ -62,7 +63,7 @@ ok('点列表项插入激活 token(@\\u200b名\\u200b)',
    "const token = '@\\u200b' + x.name + '\\u200b';" in HTML)
 ok('send 提取 activeSkills 并随 body 发送',
    'const activeSkills = []' in HTML and 'skills: activeSkills' in HTML)
-ok('复制/编辑剥离零宽标记', 'raw.replace(/' + '\\' + 'u200b/g' in HTML or "replace(/\\u200b/g" in HTML)
+ok('复制/编辑剥离零宽标记', 'raw.replace(/' + '\' + 'u200b/g' in HTML or "replace(/\\u200b/g" in HTML)
 
 print('[4] #4 两处注释修改')
 ok('技能页注释去掉分号后半句',
