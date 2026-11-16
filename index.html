@@ -1,0 +1,2357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>小助手</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f4f6f9;
+    --panel: #ffffff;
+    --panel2: #eef1f6;
+    --user: #3b82f6;
+    --usertext: #ffffff;
+    --ai: #ffffff;
+    --text: #1f2329;
+    --sub: #6b7280;
+    --accent: #3b82f6;
+    --line: #e5e7eb;
+    --danger: #ef4444;
+  }
+  body.dark {
+    --bg: #14161a;
+    --panel: #1f2329;
+    --panel2: #272c34;
+    --ai: #1f2329;
+    --text: #e8eaed;
+    --sub: #9aa0a6;
+    --accent: #60a5fa;
+    --line: #343a42;
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; height: 100%;
+  }
+  header {
+    padding: 12px 16px; background: var(--panel);
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--line); flex-shrink: 0;
+  }
+  .header-left { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .header-title { flex: 1; min-width: 0; text-align: center; }
+  header .title { font-size: 16px; font-weight: 600; }
+  .header-title .sub { font-size: 12px; color: var(--sub); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #status { font-size: 12px; color: var(--sub); flex-shrink: 0; }
+  #status.err { color: var(--danger); }
+  #status.ok { color: #16a34a; }
+  .header-left #toggleBtn, .header-left #newAgentBtn {
+    border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border-radius: 8px; padding: 6px 9px; font-size: 13px; cursor: pointer;
+  }
+  .header-left #newAgentBtn { color: var(--accent); border-color: var(--accent); background: transparent; }
+  #settingsBtn { display: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border-radius: 8px; padding: 6px 9px; font-size: 13px; cursor: pointer; flex-shrink: 0; }
+  #main { flex: 1; display: flex; overflow: hidden; min-width: 0; }
+  #sidebar {
+    width: 168px; background: var(--panel2); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; flex-shrink: 0;
+    transition: width 0.18s ease; overflow: hidden;
+  }
+  #sidebar.collapsed { width: 0; border-right: none; }
+  #agentList {
+    flex: 1; overflow-y: auto; padding: 6px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .agent-item {
+    padding: 9px 10px; border-radius: 10px; background: var(--panel);
+    border: 1px solid transparent; cursor: pointer;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .agent-item.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .agent-item .aname { font-size: 14px; font-weight: 600; }
+  .agent-item .acount { font-size: 11px; color: var(--sub); }
+  #empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 14px; }
+  #chatPanel { flex: 1; display: none; flex-direction: column; min-width: 0; }
+  #chatHeader {
+    padding: 12px 16px; background: var(--panel);
+    border-bottom: 1px solid var(--line); flex-shrink: 0;
+    display: flex; align-items: center;
+  }
+  #chatHeader > div { flex: 1; min-width: 0; }
+  #agentName { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #agentSetting { font-size: 12px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #chatHeader button { margin-left: 6px; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--text); border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; flex-shrink: 0; }
+  #chatHeader #delAgentBtn { color: var(--danger) !important; border-color: transparent; background: transparent; }
+  /* #10：清除消息是常用按钮，改用正常文字色；删除类危险操作仍保留红色 */
+  #chatHeader #clearChatBtn { color: var(--text) !important; border-color: transparent; background: transparent; }
+  .danger, button.danger, .sk-item button.danger, .ch-item button.danger,
+  .sess-item .sdel, #delAgentBtn { color: var(--danger) !important; }
+  /* v1.1.15 #1：气泡右上角 ✕ 已删除，只保留长按菜单「删除」正常色 */
+  #msgMenu .mm-del { color: var(--text) !important; }
+  #chat { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; min-width: 0; }
+  .msg { max-width: 86%; min-width: 0; padding: 11px 14px; border-radius: 14px; line-height: 1.6; font-size: 15px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--user); color: var(--usertext); border-bottom-right-radius: 4px; }
+  .msg.ai { align-self: flex-start; background: var(--ai); color: var(--text); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .msg.err { align-self: center; background: #fef2f2; color: var(--danger); font-size: 13px; max-width: 92%; border: 1px solid #fecaca; }
+  body.dark .msg.err { background: #3b1f1f; border-color: #7f1d1d; }
+  .typing { color: var(--sub); font-style: italic; }
+  .typing span { display: inline-block; animation: blink 1s infinite; }
+  .typing span:nth-child(2) { animation-delay: .2s }
+  .typing span:nth-child(3) { animation-delay: .4s }
+  @keyframes blink { 0%, 100% { opacity: .2 } 50% { opacity: 1 } }
+  #bar { flex-shrink: 0; background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); position: relative; }
+  #row { display: flex; gap: 8px; align-items: flex-end; }
+  /* v1.1.20 #3：输入框镜像高亮层。wrap 占据原 textarea 的 flex 位，
+     mirror 与 textarea 完全同盒模型叠放；textarea 文字透明、只留光标。 */
+  #inputWrap { flex: 1; min-width: 0; position: relative;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; }   /* v1.1.22 #1：唯一可见边框归容器，聚焦整体变蓝不错位 */
+  #inputWrap:focus-within { border-color: var(--accent); }
+  #input, #inputMirror {
+    box-sizing: border-box; width: 100%; resize: none;
+    border-radius: 12px; padding: 11px 13px; font-size: 15px;
+    font-family: inherit; line-height: 1.5; max-height: 120px; margin: 0;
+    white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
+  }
+  /* v1.1.22 #1：可见边框统一交给 #inputWrap 容器；mirror 与 textarea 均无边框，
+     消除双层盒叠出的聚焦错位毛边与灰角，全树只剩唯一一道边框。 */
+  #inputMirror {
+    position: absolute; inset: 0; background: transparent; color: var(--text); pointer-events: none;
+    overflow-y: auto; user-select: none; border: none;
+  }
+  #inputMirror .hl { background: #fde047; color: #713f12; border-radius: 3px; }
+  #input {
+    position: relative; z-index: 1; color: transparent; caret-color: var(--text);
+    background: transparent; -webkit-text-fill-color: transparent;
+    border: none;
+  }
+  #input { flex: none; }
+  #input:focus { outline: none; }
+  #input::placeholder { font-size: 12px; color: var(--sub);
+    /* v1.1.20 #3：textarea 正文透明，但 placeholder 必须可见 */
+    -webkit-text-fill-color: var(--sub); }
+  /* ①④ 渠道按钮收窄为只显示渠道名首字符，省下的宽度归输入框 */
+  #channelTrigger {
+    width: 40px; flex-shrink: 0; height: 42px; border: 1px solid var(--line);
+    background: var(--panel2); color: var(--text); border-radius: 12px;
+    padding: 0; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+  }
+  #channelTrigger.on { border-color: var(--accent); color: var(--accent); }
+  #channelPicker { position: absolute; right: 12px; bottom: 100%; width: 224px;
+    height: 46vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
+    padding: 8px; display: none; z-index: 40; }
+  #channelPicker .pk-title { font-size: 11px; color: var(--sub); padding: 4px 6px 8px; }
+  #channelPicker .pk-ch { display: block; width: 100%; text-align: left; border: none;
+    background: var(--panel2); color: var(--text); border-radius: 8px; padding: 8px 10px;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 4px; }
+  #channelPicker .pk-ch.on { background: var(--accent); color: #fff; }
+  #channelPicker .pk-model { display: block; width: 100%; text-align: left; border: none;
+    background: transparent; color: var(--text); border-radius: 8px; padding: 7px 18px;
+    font-size: 12px; cursor: pointer; font-family: inherit;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #channelPicker .pk-model.on { color: var(--accent); font-weight: 600; }
+  #modelCandidates button.on { background: var(--accent); color: #fff; }
+  #skillBtn, #userBtn { margin: 6px; border: 1px solid var(--line); background: var(--panel);
+    color: var(--text); border-radius: 10px; padding: 9px 10px; font-size: 13px;
+    cursor: pointer; flex-shrink: 0; font-family: inherit; text-align: left; }
+  #send { border: none; background: var(--accent); color: #fff; border-radius: 12px; padding: 11px 14px; font-size: 15px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+  #send:disabled { opacity: .45; }
+  #barHint { font-size: 11px; color: var(--sub); margin-top: 6px; text-align: right; }
+  #modal { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal-box { background: var(--panel); border-radius: 16px; padding: 20px; width: 310px; max-height: 88%; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .modal-box h3 { font-size: 16px; text-align: center; }
+  .field { display: flex; align-items: flex-start; gap: 10px; }
+  .field label { width: 40px; flex-shrink: 0; font-size: 14px; color: var(--sub); padding-top: 11px; }
+  .field input, .field textarea {
+    flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 14px; font-family: inherit;
+  }
+  .field textarea { resize: vertical; line-height: 1.5; }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+  .frow { display: flex; gap: 8px; justify-content: flex-end; }
+  .frow button { border: none; border-radius: 10px; padding: 9px 14px; font-size: 14px; cursor: pointer; }
+  #fOk { background: var(--accent); color: #fff; }
+  #fCancel { background: var(--panel2); color: var(--text); }
+
+  /* 设置：独立整页，三分区 */
+  #settingsPage { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: none; flex-direction: column; }
+  #settingsBar { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  #settingsBar .st { font-size: 16px; font-weight: 600; flex: 1; }
+  #settingsBackBtn { border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  #settingsTabs { display: flex; gap: 6px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: var(--panel);
+    border-top: 1px solid var(--line); border-bottom: none; flex-shrink: 0; margin-top: auto; }
+  #settingsTabs button { flex: 1; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--sub); border-radius: 10px; padding: 9px 4px; font-size: 13px; cursor: pointer; font-family: inherit; }
+  #settingsTabs button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  #settingsBody { flex: 1; overflow-y: auto; padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); }
+  .sec { display: none; }
+  .sec.on { display: block; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px; margin-bottom: 12px; }
+  .card h4 { font-size: 14px; margin-bottom: 4px; }
+  .card .tip { font-size: 12px; color: var(--sub); line-height: 1.6; margin-bottom: 10px; }
+  .ch-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+  .ch-item:first-child { border-top: none; }
+  .ch-main { flex: 1; min-width: 0; }
+  .ch-name { font-size: 14px; font-weight: 600; }
+  .ch-meta { font-size: 11px; color: var(--sub); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 6px;
+    background: var(--panel2); color: var(--sub); margin-left: 6px; vertical-align: 1px; }
+  .badge.on { background: #dcfce7; color: #15803d; }
+  body.dark .badge.on { background: #14532d; color: #86efac; }
+  .ch-item button { border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; flex-shrink: 0; }
+  .ch-item button.danger { color: var(--danger); }
+  .btn { border: none; border-radius: 10px; padding: 10px 14px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
+  .btn.small { padding: 7px 10px; font-size: 12px; }
+  /* v1.1.18 #2：外观完全沿用 1.1.16 原样式（用户喜欢的全屏卡片浮层）。
+     仅把 #chForm 的 DOM 父级从 #settingsBody(overflow:auto) 移到 body 级，
+     使其 fixed 不再被 overflow 祖先劫持参考系——这一步即消除键盘弹起时
+     「上方露出上一层渠道列表」的重绘缝隙，其余零改动。 */
+  #chForm { display: none; position: fixed; inset: 0; z-index: 80; overflow-y: auto;
+    padding: 18px 14px calc(20px + env(safe-area-inset-bottom)); background: var(--bg); }
+  #chForm .field { margin-bottom: 10px; }
+  #chForm .field label { width: 62px; padding-top: 11px; font-size: 13px; }
+  #modelCandidateRow { display: none; }
+  #modelCandidates { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  #modelCandidates button { border: 1px solid var(--accent); color: var(--accent); background: transparent;
+    border-radius: 8px; padding: 5px 9px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  #chHint, #themeHint { font-size: 12px; color: var(--sub); line-height: 1.6; margin-top: 8px; }
+  #themeChoices { display: flex; gap: 10px; }
+  #themeChoices button { flex: 1; padding: 18px 8px; border-radius: 14px; font-size: 14px;
+    border: 2px solid var(--line); background: var(--panel2); color: var(--text); cursor: pointer; font-family: inherit; }
+  #themeChoices button.on { border-color: var(--accent); background: var(--panel); color: var(--accent); font-weight: 600; }
+  .about-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0;
+    border-top: 1px solid var(--line); font-size: 14px; }
+  .about-row:first-of-type { border-top: none; }
+  .about-row .k { color: var(--sub); flex-shrink: 0; }
+  .about-row .v { text-align: right; word-break: break-all; }
+  /* ⑤ 技能管理页：与设置页同一套卡片/按钮/表单样式 */
+  #userPage, #skillsPage { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: none; flex-direction: column; }
+  #userBar, #skillsBar { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  #userBar .st, #skillsBar .st { font-size: 16px; font-weight: 600; flex: 1; }
+  #userBackBtn, #skillsBackBtn { border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  #userBody, #skillsBody { flex: 1; overflow-y: auto; padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); }
+  #userSetting { width: 100%; min-height: 160px; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--text); border-radius: 10px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; }
+  .sk-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+  .sk-item:first-child { border-top: none; }
+  .sk-main { flex: 1; min-width: 0; }
+  .sk-name { font-size: 14px; font-weight: 600; }
+  .sk-meta { font-size: 11px; color: var(--sub); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sk-item button { border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; flex-shrink: 0; }
+  .sk-item button.danger { color: var(--danger); }
+  /* v1.1.19 #1：技能表单为 #skillsPage 内 flex:1 覆盖卡片（非 fixed，不盖顶栏）。
+     打开时隐藏 #skillsBody，表单占满「← 返回」栏以下全部空间并内部滚动：
+     技能再多也不会「无限往下」，顶栏始终露出、不被遮挡；内层 .card 全宽无 max-width。 */
+  #skForm { display: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); background: var(--bg); }
+  #skForm .card { margin: 0; }
+  #skForm .field { margin-bottom: 10px; }
+  #skForm .field label { width: 62px; padding-top: 11px; font-size: 13px; }
+  #skFormTip, #agFormTip { font-size: 12px; color: var(--sub); line-height: 1.6; margin-top: 8px; }
+  /* 需求③⑤：侧边栏三入口 + 工具/插件页（复用技能页样式） */
+  #toolBtn, #pluginBtn { margin: 6px; margin-top: 0; border: 1px solid var(--line); background: var(--panel);
+    color: var(--text); border-radius: 10px; padding: 9px 10px; font-size: 13px;
+    cursor: pointer; flex-shrink: 0; font-family: inherit; text-align: left; }
+  #toolsPage, #pluginsPage { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: none; flex-direction: column; }
+  #toolsBar, #pluginsBar { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  #toolsBar .st, #pluginsBar .st { font-size: 16px; font-weight: 600; flex: 1; }
+  #toolsBackBtn, #pluginsBackBtn { border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  #toolsBody, #pluginsBody { flex: 1; overflow-y: auto; padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); }
+  #toolsEmpty, #pluginsEmpty { font-size: 13px; color: var(--sub); padding: 8px 2px; }
+  /* 需求⑩：输入框左侧 + 按钮与浮层 */
+  #plusBtn { width: 40px; flex-shrink: 0; height: 42px; border: 1px solid var(--line);   /* v1.1.22 #2：默认灰框，与渠道按钮同款，仅展开列表时 .on 亮蓝 */
+    background: var(--panel2); color: var(--text); border-radius: 12px;
+    padding: 0; font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer; }
+  #plusBtn.on { border-color: var(--accent); color: var(--accent); }
+  #plusMenu { position: absolute; left: 16px; bottom: 100%; width: 180px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
+    padding: 6px; display: none; z-index: 41; }
+  #plusMenu button { display: block; width: 100%; text-align: left; border: none; background: transparent;
+    color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 13px; cursor: pointer; font-family: inherit; }
+  #plusMenu button:active { background: var(--panel2); }
+  /* 需求⑨：@ 引用列表 */
+  #atList { position: absolute; left: 16px; right: 16px; bottom: 100%; max-height: 220px; overflow-y: auto;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .18); padding: 6px; display: none; z-index: 42; }
+  #atList .at-title { font-size: 11px; color: var(--sub); padding: 4px 8px; }
+  #atList button { display: block; width: 100%; text-align: left; border: none; background: transparent;
+    color: var(--text); border-radius: 8px; padding: 9px 10px; font-size: 13px; cursor: pointer; font-family: inherit; }
+  #atList button:active { background: var(--panel2); }
+  #atList .at-kind { float: right; font-size: 10px; color: var(--sub); border: 1px solid var(--line);
+     border-radius: 6px; padding: 1px 5px; }
+   #atList .at-kind.k-skill { color: #7c3aed; border-color: #7c3aed55; }
+   #atList .at-kind.k-tool { color: #0d9488; border-color: #0d948855; }
+   #chApiKeyWrap { position: relative; flex: 1; min-width: 0; }
+   #chApiKey { width: 100%; box-sizing: border-box; padding-right: 38px !important; }
+   #chKeyEye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+     border: none; background: transparent; color: var(--sub); font-size: 15px; cursor: pointer; padding: 4px; }
+   /* 需求⑤：键盘弹起时底栏不占位，避免遮挡输入框/搜索框 */
+   body.kbd-open #settingsTabs { display: none; }
+   body.kbd-open #settingsBody { padding-bottom: 14px; }
+   .msg .att { display: block; font-size: 12px; opacity: .82; margin-top: 4px;
+     border-top: 1px dashed currentColor; padding-top: 4px; }
+   .agent-sessions { display: none; flex-direction: column; gap: 4px; margin: 6px 0 2px 4px;
+     padding-left: 8px; border-left: 2px solid var(--line); }
+   .agent-sessions.open { display: flex; }
+   .sess-item { display: flex; align-items: center; gap: 4px; font-size: 12px;
+     color: var(--sub); background: var(--panel); border-radius: 8px; padding: 6px 7px; cursor: pointer; }
+   .sess-item.on { color: var(--accent); border: 1px solid var(--accent); }
+   .sess-item .sname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+   .sess-item .sdel { color: var(--danger); font-size: 11px; padding: 0 2px; }
+   .sess-add { font-size: 11px; color: var(--accent); background: transparent; border: none;
+     text-align: left; padding: 4px; cursor: pointer; }
+   .opt-row { display: flex; align-items: center; justify-content: space-between;
+     padding: 10px 0; border-top: 1px solid var(--line); margin-top: 10px; }
+   .opt-row .tip { margin: 0; }
+   .switch { width: 46px; height: 26px; border-radius: 13px; border: 1px solid var(--line);
+     background: var(--panel2); position: relative; cursor: pointer; flex-shrink: 0; }
+   .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+     border-radius: 50%; background: var(--sub); transition: left .18s ease; }
+   .switch.on { background: var(--accent); border-color: var(--accent); }
+   .switch.on::after { left: 22px; background: #fff; }
+   .typing .secs { font-style: normal; color: var(--accent); font-variant-numeric: tabular-nums; }
+  /* v1.1.15 #4：耗时标注移到消息外——气泡下方独立行，背景=聊天背景色 */
+  .msg-meta { align-self: flex-start; max-width: 86%; font-size: 11px; line-height: 1.4;
+    margin: -8px 0 0 2px; padding: 2px 4px; color: var(--sub); opacity: .75;
+    background: var(--bg); border-radius: 6px; font-variant-numeric: tabular-nums; }
+  /* #13：背景透明、与对话背景融合，去掉虚线分割 */
+  .msg .meta { display: block; font-size: 11px; opacity: .55; margin-top: 6px;
+    background: transparent; border: none; padding: 0; color: var(--sub);
+    font-variant-numeric: tabular-nums; }
+  .msg-del { float: right; font-size: 11px; opacity: .55; cursor: pointer; border: none;
+    background: transparent; padding: 0 2px 0 8px; font-family: inherit; }
+  /* #7：显示思考过程开关开启时，思考内容单独成块（不再是一堆裸标签） */
+  .msg .think { display: block; font-size: 12px; color: var(--sub); background: transparent;
+    border-left: 2px solid var(--accent); padding: 2px 0 2px 8px; margin-bottom: 6px;
+    white-space: pre-wrap; opacity: .8; }
+  .msg .think .think-t { display: block; font-size: 11px; font-weight: 600; color: var(--accent);
+    margin-bottom: 2px; }
+  .msg .ans { white-space: pre-wrap; }
+  /* #15：工具调用详情 */
+  .msg .tools { display: block; font-size: 11px; color: var(--sub); margin-bottom: 6px; }
+  .msg .tools .t-title { font-weight: 600; color: var(--accent); margin-bottom: 3px; }
+  .msg .tools .t-row { padding: 3px 0; border-top: 1px solid var(--line); white-space: pre-wrap; word-break: break-word; }
+  /* v1.1.15 #5：顶部「模型思考等级」标题行 + 右侧开关；分割线下是渠道列表 */
+  #effortRow { padding: 2px 4px 8px; }
+  #effortRow .e-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  #effortRow .e-title { font-size: 12px; color: var(--text); font-weight: 600; margin: 0; }
+  #effortRow .e-list { display: flex; gap: 4px; }
+  #effortRow .e-list button.off { opacity: .4; }
+  #channelPicker .pk-sep { border-top: 1px solid var(--line); margin: 8px 2px 4px; }
+  #effortRow button { flex: 1; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--text); border-radius: 8px; padding: 6px 2px; font-size: 11px;
+    cursor: pointer; font-family: inherit; }
+  #effortRow button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  /* #10：长按消息菜单 + 编辑弹层 */
+  #msgMenu { position: fixed; z-index: 90; display: none; min-width: 150px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(15,23,42,.22); padding: 5px; }
+  #msgMenu button { display: block; width: 100%; text-align: left; border: none; background: transparent;
+    color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 13px; cursor: pointer; font-family: inherit; }
+  #msgMenu button:active { background: var(--panel2); }
+  #msgEdit { position: fixed; inset: 0; z-index: 95; background: rgba(15,23,42,.45);
+    display: none; align-items: center; justify-content: center; }
+  #msgEdit .me-box { background: var(--panel); border-radius: 16px; padding: 18px; width: 310px;
+    display: flex; flex-direction: column; gap: 10px; }
+  #msgEdit textarea { width: 100%; min-height: 130px; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--text); border-radius: 10px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; }
+  /* 需求⑥：模型候选浮层（滑动列表 + 搜索 + 全选/重置）。
+     v1.1.18：z-index 由 70→85，仅高于已提到 body 级(z=80)的 #chForm，
+     否则渠道表单里点「拉取模型」会被自身表单层盖住。 */
+  #modelPicker { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); display: none;
+    align-items: center; justify-content: center; z-index: 85; }
+  #modelPicker .mp-box { background: var(--panel); border-radius: 16px; width: 320px; max-height: 80vh;
+    display: flex; flex-direction: column; padding: 14px; }
+  #modelPicker .mp-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  #mpSearch { border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border-radius: 10px; padding: 9px 12px; font-size: 13px; font-family: inherit; margin-bottom: 8px; }
+  #mpSearch:focus { outline: none; border-color: var(--accent); }
+  #mpList { flex: 1; overflow-y: auto; min-height: 120px; max-height: 46vh; }
+  #mpList button { display: block; width: 100%; text-align: left; border: none; background: transparent;
+    color: var(--text); border-radius: 8px; padding: 9px 10px; font-size: 13px; cursor: pointer; font-family: inherit;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #mpList button.on { background: var(--panel2); color: var(--accent); font-weight: 600; }
+  #mpList .mp-empty { font-size: 12px; color: var(--sub); padding: 12px; text-align: center; }
+  .mp-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .mp-actions button { flex: 1; }
+  /* 需求⑫1：渠道表单提供商选择 */
+  #chProvider { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 14px; font-family: inherit;
+    -webkit-appearance: none; appearance: none; outline: none; }
+  /* #2：选完提供商后不再有黄色焦点框，改与渠道名一致的蓝色高亮 */
+  #chProvider:focus, #chProvider.picked { border-color: var(--accent); color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(59,130,246,.18); }
+  /* 需求⑧：渠道浮层里的渠道可折叠 */
+  #channelPicker .pk-ch { position: relative; }
+  #channelPicker .pk-ch .arrow { float: right; font-size: 11px; color: var(--sub); }
+  #channelPicker .pk-models { display: none; }
+  #channelPicker .pk-models.open { display: block; margin: 2px 0 6px 8px;
+    border-left: 2px solid var(--line); padding-left: 4px; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <button id="toggleBtn" title="收起/展开列表">☰</button>
+      <button id="newAgentBtn">＋ 新建</button>
+    </div>
+    <div class="header-title">
+      <div class="title">小助手</div>
+      <div class="sub" id="modelSub">模型：内置模型</div>
+    </div>
+    <div id="status">连接中…</div>
+    <button id="settingsBtn" title="设置">设置</button>
+  </header>
+  <div id="main">
+    <aside id="sidebar" class="collapsed">
+      <div id="agentList"></div>
+      <button id="userBtn">◉ 用户</button>
+      <button id="skillBtn">✦ 技能</button>
+      <button id="toolBtn">⚒ 工具</button>
+      <button id="pluginBtn">⬡ 插件</button>
+    </aside>
+    <div id="empty">点击「新建智能体」开始</div>
+    <div id="chatPanel">
+      <div id="chatHeader">
+        <div>
+          <div id="agentName"></div>
+          <div id="agentSetting"></div>
+        </div>
+        <button id="editAgentBtn">编辑</button>
+        <button id="clearChatBtn">清除消息</button>
+        <button id="delAgentBtn">删除</button>
+      </div>
+      <div id="chat"></div>
+       <div id="bar">
+         <div id="row">
+            <button id="plusBtn" title="添加附件">＋</button>
+            <!-- v1.1.20 #3：透明 textarea + 底层黄色高亮镜像层（A 方案）。
+                 mirror 与 textarea 盒模型完全一致；textarea 文字透明、只保留光标，
+                 激活的 @token 在镜像层显示为黄色高亮。 -->
+            <div id="inputWrap">
+              <div id="inputMirror" aria-hidden="true"></div>
+              <textarea id="input" rows="1" placeholder="输入问题，Enter 发送"></textarea>
+            </div>
+            <button id="channelTrigger" title="选择渠道模型"></button>
+           <button id="send">发送</button>
+         </div>
+         <div id="channelPicker"></div>
+         <div id="plusMenu">
+           <button id="pmImage">🖼 图片</button>
+           <button id="pmFile">📄 文件</button>
+           <button id="pmSkill">✦ 技能</button>
+           <button id="pmTool">⚒ 工具</button>
+           <button id="pmPlugin">⬡ 插件</button>
+         </div>
+         <div id="atList"></div>
+         <div id="barHint">＋ 附件 · @ 引用技能/工具 · 点首字母切换渠道模型</div>
+       </div>
+    </div>
+  </div>
+
+  <!-- 智能体新建/编辑：昵称 + 设定（5 行） -->
+  <div id="modal">
+    <div class="modal-box">
+      <h3 id="modalTitle">新建智能体</h3>
+      <div class="field">
+        <label for="fName">昵称</label>
+        <input id="fName" placeholder="给智能体起个名字">
+      </div>
+      <div class="field">
+        <label for="fSetting">设定</label>
+        <textarea id="fSetting" rows="5" placeholder="描述它的角色与语气"></textarea>
+      </div>
+      <div id="agFormTip"></div>   <!-- v1.1.22 #3：智能体重名提示，复用技能同款样式 -->
+      <div class="frow">
+        <button id="fCancel">取消</button>
+        <button id="fOk">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 设置：独立页面，三分区 -->
+  <div id="settingsPage">
+    <div id="settingsBar">
+      <button id="settingsBackBtn">← 返回</button>
+      <div class="st">设置</div>
+    </div>
+    <div id="settingsBody">
+      <!-- 模型设置 -->
+      <div id="tabModels" class="sec on">
+        <div class="card">
+          <h4>渠道列表</h4>
+          <div class="tip">内置模型置顶、默认启用且不可修改。其余为 OpenAI 兼容渠道，可添加多个。</div>
+          <div id="channelList"></div>
+          <div class="frow" style="margin-top:10px">
+            <button id="addChannelBtn" class="btn primary small">＋ 添加渠道</button>
+          </div>
+        </div>
+      </div>
+      <!-- 个性化 -->
+      <div id="tabPersonal" class="sec">
+        <div class="card">
+          <h4>主题外观</h4>
+          <div class="tip">默认浅色。切换后状态栏与导航栏会一起换色。</div>
+          <div id="themeChoices">
+            <button id="themeLightBtn" class="on">☀ 浅色</button>
+            <button id="themeDarkBtn">☾ 深色</button>
+          </div>
+          <div id="themeHint"></div>
+          <div class="opt-row">
+            <div><div style="font-size:14px;font-weight:600">假流式输出</div>
+              <div class="tip">开启后模型回复会逐段显示。</div></div>
+            <div id="streamSwitch" class="switch" role="switch" aria-label="假流式输出"></div>
+          </div>
+          <div class="opt-row">
+            <div><div style="font-size:14px;font-weight:600">显示工具调用</div>
+              <div class="tip">开启后在回复里显示模型调用过的工具、参数与真实返回结果。工具自动执行已内置开启。</div></div>
+            <div id="loopSwitch" class="switch" role="switch" aria-label="显示工具调用"></div>
+          </div>
+          <div class="opt-row">
+            <div><div style="font-size:14px;font-weight:600">模型回复时间</div>
+              <div class="tip">回复下方标注本轮总耗时。</div></div>
+            <div id="timingSwitch" class="switch" role="switch" aria-label="模型回复时间"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 关于 -->
+      <div id="tabAbout" class="sec">
+        <div class="card">
+          <h4>小助手</h4>
+          <div class="tip">简单对话助手</div>
+          <div class="about-row"><span class="k">项目地址</span><span class="v" id="aboutUrl">https://github.com/asd11288k/xiao-zhushou</span></div>
+          <div class="about-row"><span class="k">作者</span><span class="v" id="aboutAuthor">子兮</span></div>
+          <div class="about-row"><span class="k">版本号</span><span class="v" id="aboutVersion">1.1.22</span></div>
+        </div>
+      </div>
+    </div>
+    <div id="settingsTabs">
+      <button id="tabBtnModels" class="on">模型设置</button>
+      <button id="tabBtnPersonal">个性化</button>
+      <button id="tabBtnAbout">关于</button>
+    </div>
+  </div>
+
+  <!-- #17 用户设定：开关开启后作为常驻提示词，让 AI 了解用户 -->
+  <div id="userPage">
+    <div id="userBar">
+      <button id="userBackBtn">← 返回</button>
+      <div class="st">用户</div>
+    </div>
+    <div id="userBody">
+      <div class="card">
+        <h4>关于用户的设定</h4>
+        <div class="tip">填写你的称呼、偏好、背景等；开启后每次对话都会常驻注入给 AI，不显示在聊天里。</div>
+        <div class="opt-row">
+          <div><div style="font-size:14px;font-weight:600">常驻提示词</div>
+            <div class="tip">关闭后 AI 不再自动读取这份设定。</div></div>
+          <div id="userProfileSwitch" class="switch" role="switch" aria-label="常驻用户设定"></div>
+        </div>
+        <textarea id="userSetting" rows="7"></textarea>
+        <div class="frow" style="margin-top:10px">
+          <button id="userSaveBtn" class="btn primary small">保存</button>
+        </div>
+        <div id="userHint" class="tip" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 技能管理：独立整页，创建/编辑/删除；聊天框以 @技能名 引用 -->
+  <div id="skillsPage">
+    <div id="skillsBar">
+      <button id="skillsBackBtn">← 返回</button>
+      <div class="st">技能</div>
+    </div>
+    <div id="skillsBody">
+      <div class="card">
+        <h4>技能列表</h4>
+        <div class="tip">在聊天框输入 @技能名 即可引用。</div>
+        <div id="skillList"></div>
+        <div class="frow" style="margin-top:10px">
+          <button id="addSkillBtn" class="btn primary small">＋ 新建技能</button>
+        </div>
+      </div>
+    </div>
+    <!-- v1.1.19 #1：技能表单维持你喜欢的「覆盖式弹层」观感，但改为 #skillsPage 内 flex:1 覆盖列表区。
+         外层 #skForm 铺满顶栏以下空间并内部滚动：技能再多，表单也不会被挤到「无限往下」；
+         顶部「← 返回 / 技能」栏（flex-shrink:0）始终露出、永不被遮挡；
+         内层 .card 承载外观、全宽无 max-width 居中。打开表单时 JS 隐藏 #skillsBody。 -->
+    <div id="skForm">
+      <div class="card">
+        <h4 id="skFormTitle">新建技能</h4>
+        <div class="field"><label for="skName">名称</label><input id="skName" placeholder="如：校对"></div>
+        <div class="field"><label for="skNote">备注</label><input id="skNote" placeholder="这个技能用来做什么"></div>
+        <div class="field"><label for="skPrompt">提示词</label><textarea id="skPrompt" rows="5" placeholder="后台注入给 AI 的指令"></textarea></div>
+        <div class="frow">
+          <button id="skCancelBtn" class="btn ghost small">取消</button>
+          <button id="skSaveBtn" class="btn primary small">保存</button>
+        </div>
+        <div id="skFormTip"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- v1.1.18 #2：恢复 1.1.16 原始「单卡片全屏浮层」外观（用户喜欢的弹出层样式）。
+       与旧版唯一差异：DOM 父级由 #settingsBody(overflow:auto) 移到 body 级，
+       使 fixed 不被 overflow 祖先劫持参考系——这一步即消除键盘弹起时上方露出
+       渠道列表的重绘缝隙，外观/层级/字段零改动。 -->
+  <div class="card" id="chForm">
+      <h4 id="chFormTitle">添加渠道</h4>
+      <div class="tip">密钥只存本机、不会回显。</div>
+      <div class="field"><label for="chName">名称</label><input id="chName" placeholder="如：我的网关"></div>
+      <div class="field"><label for="chProvider">提供商</label><select id="chProvider"></select></div>
+      <div class="field"><label for="chBaseUrl">Base URL</label><input id="chBaseUrl" placeholder="https://api.xxx.com/v1"></div>
+      <div class="field"><label for="chApiKey">API Key</label><div id="chApiKeyWrap"><input id="chApiKey" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="输入 API Key" style="-webkit-text-security:disc"><button id="chKeyEye" type="button" title="显示/隐藏密钥" aria-label="显示或隐藏密钥"></button></div></div>
+      <div class="field"><label for="chModel">模型名</label><input id="chModel" placeholder="如 gpt-4o-mini"></div>
+      <div class="frow">
+        <button id="pullModelsBtn" class="btn ghost small">拉取模型</button>
+        <button id="chCancelBtn" class="btn ghost small">取消</button>
+        <button id="chSaveBtn" class="btn primary small">保存</button>
+      </div>
+      <div id="modelCandidateRow">
+        <div class="tip" style="margin-top:10px">点击模型名即可快速填入：</div>
+        <div id="modelCandidates"></div>
+      </div>
+      <div id="chHint"></div>
+  </div>
+
+  <!-- 需求③：工具页（内置五个，不可增删） -->
+  <div id="toolsPage">
+    <div id="toolsBar">
+      <button id="toolsBackBtn">← 返回</button>
+      <div class="st">工具</div>
+    </div>
+    <div id="toolsBody">
+      <div class="card">
+        <h4>内置工具</h4>
+        <div class="tip">工具是真实执行的能力：AI 会在需要时建议调用，用户也可在聊天框用 @工具名 直接要求执行。</div>
+        <div id="toolList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 需求③：插件页（暂无插件） -->
+  <div id="pluginsPage">
+    <div id="pluginsBar">
+      <button id="pluginsBackBtn">← 返回</button>
+      <div class="st">插件</div>
+    </div>
+    <div id="pluginsBody">
+      <div class="card">
+        <h4>插件列表</h4>
+        <div id="pluginsEmpty">暂无插件。插件是可扩展的第三方能力，后续版本会在这里出现。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #10：长按历史消息菜单（复制 / 编辑 / 删除） -->
+  <div id="msgMenu">
+    <button id="mmCopy">复制</button>
+    <button id="mmEdit">编辑</button>
+    <button id="mmDel" class="mm-del">删除</button>
+  </div>
+  <div id="msgEdit">
+    <div class="me-box">
+      <h3 style="font-size:16px;text-align:center">编辑这条消息</h3>
+      <textarea id="meText"></textarea>
+      <div class="frow">
+        <button id="meCancel" class="btn ghost small">取消</button>
+        <button id="meSave" class="btn primary small">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 需求⑥：拉取模型 → 滑动列表 + 搜索 + 全选/重置 -->
+  <div id="modelPicker">
+    <div class="mp-box">
+      <div class="mp-title" id="mpTitle">选择模型</div>
+      <input id="mpSearch" placeholder="搜索模型名…">
+      <div id="mpList"></div>
+      <div class="mp-actions">
+        <button id="mpAllBtn" class="btn ghost small">全选</button>
+        <button id="mpResetBtn" class="btn ghost small">重置</button>
+        <button id="mpOkBtn" class="btn primary small">确定</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const chatEl = $('chat');
+const inputEl = $('input');
+const sendBtn = $('send');
+const statusEl = $('status');
+const sidebarEl = $('sidebar');
+const agentListEl = $('agentList');
+const newAgentBtn = $('newAgentBtn');
+const toggleBtn = $('toggleBtn');
+const emptyEl = $('empty');
+const chatPanelEl = $('chatPanel');
+const agentNameEl = $('agentName');
+const agentSettingEl = $('agentSetting');
+const editAgentBtn = $('editAgentBtn');
+const delAgentBtn = $('delAgentBtn');
+const clearChatBtn = $('clearChatBtn');
+const modalEl = $('modal');
+const modalTitleEl = $('modalTitle');
+const fNameEl = $('fName');
+const fSettingEl = $('fSetting');
+const fOkEl = $('fOk');
+const fCancelEl = $('fCancel');
+const modelSubEl = $('modelSub');
+const settingsBtnEl = $('settingsBtn');
+const settingsPageEl = $('settingsPage');
+const settingsBackBtn = $('settingsBackBtn');
+const channelTrigger = $('channelTrigger');
+const channelPicker = $('channelPicker');
+const channelListEl = $('channelList');
+const skillBtnEl = $('skillBtn');
+const skillsPageEl = $('skillsPage');
+const skillsBackBtn = $('skillsBackBtn');
+const skillListEl = $('skillList');
+
+let agents = [];
+let currentId = null;
+let busy = false;
+let editingId = null;
+let channels = [];
+let selectedChannelId = 'builtin';
+let selectedModel = '';
+let editingChannelId = null;
+let currentTheme = 'light';
+let skills = [];
+let editingSkillId = null;
+let candidateModels = [];
+let pendingImages = [];   // {name, data} 图片视觉载荷
+let pendingFiles = [];    // {name, text} 文件文本载荷
+let providers = [];       // 需求⑫1：提供商列表
+let toolItems = [];       // 需求③：工具列表
+let plugins = [];         // #18 插件列表（当前为空，但入口与技能/工具一致）
+let pickerModels = [];    // 需求⑥：浮层里的全量模型
+let pickerSelected = [];  // 需求⑥：浮层勾选状态
+let streamMode = true;    // #8 个性化开关默认全开
+let agentLoopMode = true; // 需求⑫ 工具自动执行
+let expandedAgentId = ''; // 需求⑦ 侧栏展开的智能体
+let currentSessionId = '';// 需求⑦ 当前会话
+let typingTimer = null;   // 思考计时器（始终内置开启）
+let showThinkMode = false; // v1.1.15 #4：显示思考过程功能已删除，恒不渲染思考块
+let showToolMode = false;  // v1.1.15 #4：显示工具调用，默认关
+let timingMode = true;    // #8 模型回复时间标注（默认开）
+let reasoningEffort = 'high';   // #16 思考等级
+let reasoningParamMode = false; // v1.1.15 #5：思考等级传参开关，默认关（关时不传参数、5 档不可点）
+let userProfileOn = true;       // #17 用户设定常驻开关
+let pendingAbort = null;  // 当前请求的 AbortController，点「取消」中断
+let msgIndex = 0;         // 单条消息删除用的稳定序号
+let longPressTimer = null;// #10 长按计时
+let msgMenuIdx = -1;      // #10 当前长按的消息下标
+let msgMenuBubble = null; // #10 当前长按的气泡
+const EFFORT_LEVELS = [
+  { v: 'low', t: '低' }, { v: 'medium', t: '中' }, { v: 'high', t: '高' },
+  { v: 'xhigh', t: '极高' }, { v: 'max', t: '最高' }
+];
+
+const API = (location.protocol === 'http:' ? '' : 'http://127.0.0.1:8000');
+
+function setStatus(text, cls) {
+  statusEl.textContent = text;
+  statusEl.className = cls || '';
+}
+function scrollBottom() { chatEl.scrollTop = chatEl.scrollHeight; }
+/** #7 解析模型输出里的思考段；返回 { think, body }，兼容多种思考标签。 */
+function parseAnswer(text) {
+  const src = String(text || '');
+  const re = /<\s*(think|thinking|reasoning|thought)\s*>([\s\S]*?)<\/\s*\1\s*>/gi;
+  let think = '', body = '', last = 0, m;
+  while ((m = re.exec(src)) !== null) {
+    think += (think ? '\n' : '') + m[2].trim();
+    body += src.slice(last, m.index);
+    last = re.lastIndex;
+  }
+  body += src.slice(last);
+  // 未闭合的思考标签也剥掉，避免裸标签糊在气泡里
+  body = body.replace(/<\s*\/?\s*(think|thinking|reasoning|thought)\s*>/gi, '').trim();
+  return { think: think, body: body };
+}
+/** 历史消息渲染仍走纯文本：开关关时剥思考段，开时保留原文。 */
+function splitThink(text) {
+  if (!text) return '';
+  const p = parseAnswer(text);
+  return showThinkMode ? String(text) : p.body;
+}
+/** #7/#8：把答案、思考块、工具详情、附加信息渲染进同一个气泡，各占独立子节点，
+ *  流式逐段更新只改 .ans 的 textContent，不会覆盖 meta / 工具详情。 */
+function renderAnswerInto(bubble, parsed, progress, toolCalls) {
+  let thinkBox = bubble.querySelector('.think');
+  let ansBox = bubble.querySelector('.ans');
+  let toolsBox = bubble.querySelector('.tools');
+  if (!thinkBox) { thinkBox = document.createElement('span'); thinkBox.className = 'think'; bubble.appendChild(thinkBox); }
+  if (!toolsBox) { toolsBox = document.createElement('span'); toolsBox.className = 'tools'; bubble.appendChild(toolsBox); }
+  if (!ansBox) { ansBox = document.createElement('span'); ansBox.className = 'ans'; bubble.appendChild(ansBox); }
+  if (showThinkMode && parsed.think) {
+    thinkBox.style.display = 'block';
+    thinkBox.textContent = '';
+    const t = document.createElement('span'); t.className = 'think-t'; t.textContent = '思考过程';
+    thinkBox.appendChild(t);
+    thinkBox.appendChild(document.createTextNode(parsed.think));
+  } else { thinkBox.style.display = 'none'; thinkBox.textContent = ''; }
+  if (showToolMode && toolCalls && toolCalls.length) {
+    toolsBox.style.display = 'block';
+    toolsBox.textContent = '';
+    const tt = document.createElement('span'); tt.className = 't-title';
+    tt.textContent = '工具调用详情（' + toolCalls.length + ' 次）';
+    toolsBox.appendChild(tt);
+    toolCalls.forEach(c => {
+      const row = document.createElement('span'); row.className = 't-row';
+      let args = '';
+      try { args = JSON.stringify(c.args || {}); } catch (e) { args = String(c.args || ''); }
+      let res = String(c.result || c.error || '');
+      if (res.length > 600) res = res.slice(0, 600) + '…';
+      row.textContent = '第' + (c.round || 1) + '轮 · ' + (c.tool || c.rawId || '?')
+        + ' · ' + (c.elapsedMs || 0) + 'ms · ' + (c.ok === false ? '失败' : '成功')
+        + '\n参数：' + args
+        + '\n返回：' + (c.resultCount !== undefined ? c.resultCount + ' 条 · ' : '')
+        + (c.source ? '来源 ' + c.source + ' · ' : '') + res;
+      toolsBox.appendChild(row);
+    });
+  } else { toolsBox.style.display = 'none'; toolsBox.textContent = ''; }
+  ansBox.textContent = progress === undefined ? parsed.body : progress;
+}
+function brief(text, limit) {
+  if (!text) return '';
+  return text.length > limit ? text.slice(0, limit) + '…' : text;
+}
+function addMsg(text, cls, opts) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  setBubbleText(d, text);   // v1.1.20 #3：含激活 token 时黄色高亮
+  // v1.1.15 #1：气泡右上角 ✕ 已去掉，删除统一走长按菜单。
+  // #6：所有气泡（新对话发出的、历史重渲染的）都绑定长按，索引在打开菜单时动态计算。
+  bindLongPress(d);
+  chatEl.appendChild(d);
+  scrollBottom();
+  return d;
+}
+
+/** v1.1.15 #1/#6：所有气泡（含新对话刚发的消息）都能长按。
+ *  消息下标按当前聊天区里的可编辑气泡顺序动态计算，对应持久化 messages 的下标，
+ *  避免「只有 selectAgent 重渲染过才有 mid」导致新对话长按失效。 */
+function messageIndexOf(bubble) {
+  let idx = -1;
+  for (let i = 0; i < chatEl.children.length; i++) {
+    const c = chatEl.children[i];
+    const cn = String(c.className);
+    // 只认「msg xxx」气泡；排除 .msg-meta（耗时标注行）与 .err
+    if (cn !== 'msg' && cn.indexOf('msg ') !== 0) continue;
+    if (cn.indexOf('err') >= 0) continue;   // err 气泡不落库
+    idx++;
+    if (c === bubble) return idx;
+  }
+  return -1;
+}
+function bindLongPress(d) {
+  if (!d || d._longPressBound || String(d.className).indexOf('err') >= 0) return;
+  d._longPressBound = true;
+  d.addEventListener('touchstart', (ev) => {
+    const t = ev.touches && ev.touches[0];
+    const x = t ? t.clientX : 0, y = t ? t.clientY : 0;
+    longPressTimer = setTimeout(() => {
+      const idx = messageIndexOf(d);
+      if (idx >= 0) openMsgMenu(d, idx, x, y);
+    }, 500);
+  });
+  d.addEventListener('touchend', clearLongPress);
+  d.addEventListener('touchmove', clearLongPress);
+  d.addEventListener('touchcancel', clearLongPress);
+  d.addEventListener('contextmenu', (ev) => {
+    ev.preventDefault();
+    const idx = messageIndexOf(d);
+    if (idx >= 0) openMsgMenu(d, idx, 0, 0);
+  });
+}
+function clearLongPress() { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } }
+/** #10 长按菜单：复制 / 编辑 / 删除（删除二次确认，编辑与删除直接改持久化上下文）。 */
+function openMsgMenu(bubble, idx, x, y) {
+  clearLongPress();
+  msgMenuIdx = idx; msgMenuBubble = bubble;
+  const menu = $('msgMenu');
+  menu.style.display = 'block';
+  const w = 160, h = 132;
+  menu.style.left = Math.max(8, Math.min((window.innerWidth || 360) - w - 8, (x || 20) - 20)) + 'px';
+  menu.style.top = Math.max(8, (y || 120) - h) + 'px';
+  if (document.addEventListener && !menu._outside) {
+    menu._outside = (ev) => {
+      if (menu.contains && menu.contains(ev.target)) return;
+      closeMsgMenu();
+    };
+    document.addEventListener('click', menu._outside, true);
+  }
+}
+function closeMsgMenu() {
+  $('msgMenu').style.display = 'none';
+  const menu = $('msgMenu');
+  if (menu._outside && document.removeEventListener) {
+    document.removeEventListener('click', menu._outside, true);
+    menu._outside = null;
+  }
+}
+function msgMenuText() {
+  if (!msgMenuBubble) return '';
+  const ans = msgMenuBubble.querySelector('.ans');
+  const raw = ans ? (ans.textContent || '') : ((msgMenuBubble.textContent || '').trim());
+  // v1.1.20 #3：去掉零宽激活标记，复制/编辑得到的是干净文本（不含 \u200b）
+  return raw.replace(/\u200b/g, '');
+}
+/** v1.1.20 #3：气泡文本渲染。无激活 token 时走原 textContent（零行为改变）；
+ *  含 @\u200b名\u200b 时转义后把 token 渲染为黄色高亮，且切会话后历史同样重建。 */
+function setBubbleText(d, text) {
+  if (String(text).indexOf('\u200b') < 0) { d.textContent = text; return; }
+  d.innerHTML = escHtml(text).replace(/@\u200b([^\u200b]+)\u200b/g, '<span class="hl">@$1</span>');
+}
+function copyMsgText(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    if (document.execCommand) document.execCommand('copy');
+    ta.remove();
+  } catch (e) { /* 部分 WebView 不支持剪贴板，忽略 */ }
+}
+async function deleteHistoryMessage(idx) {
+  if (!currentId || !Number.isFinite(idx)) return;
+  // #10 删除要二次确认，但按钮用正常色（常用按钮不需警惕色）
+  if (!confirm('确定删除这条消息吗？删除后 AI 也不会再把它带入上下文。')) return;
+  try {
+    const r = await fetch(API + '/agents/' + currentId + '/messages/' + idx, {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: currentSessionId })
+    });
+    const d = await r.json();
+    if (d.ok) await selectAgent(currentId, currentSessionId);
+  } catch (e) { setStatus('删除失败', 'err'); }
+}
+/** #10 编辑：PUT 直接改持久化上下文，重渲染后 AI 读到的是新内容。 */
+async function saveMsgEdit() {
+  const text = $('meText').value;
+  if (!currentId || msgMenuIdx < 0) return;
+  try {
+    const r = await fetch(API + '/agents/' + currentId + '/messages/' + msgMenuIdx, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: currentSessionId, content: text })
+    });
+    const d = await r.json();
+    if (d.ok) { $('msgEdit').style.display = 'none'; await selectAgent(currentId, currentSessionId); }
+    else setStatus('编辑失败', 'err');
+  } catch (e) { setStatus('编辑失败', 'err'); }
+}
+function addTyping() {
+  const d = document.createElement('div');
+  d.className = 'msg ai typing';
+  // #6 先「接收中...」；不再用固定 260ms 定时假装思考，
+  // 由请求真正发出（fetch 已调用）这一事件切到「思考中」并走实时秒数。
+  d.textContent = '接收中...';
+  chatEl.appendChild(d);
+  scrollBottom();
+  return d;
+}
+function startThinkingTimer(d, t0) {
+  d.innerHTML = '思考中 <span class="secs">0.0s</span><span>.</span><span>.</span><span>.</span>';
+  typingTimer = setInterval(() => {
+    if (!d.parentNode) { stopTypingTimer(); return; }
+    const el = d.querySelector('.secs');
+    if (el) el.textContent = ((Date.now() - t0) / 1000).toFixed(1) + 's';
+  }, 100);
+}
+function stopTypingTimer() { if (typingTimer) { clearInterval(typingTimer); typingTimer = null; } }
+async function checkHealth() {
+  try {
+    const r = await fetch(API + '/health', { method: 'GET' });
+    if (r.ok) setStatus('已连接', 'ok'); else setStatus('服务异常', 'err');
+  } catch (e) { setStatus('无法连接服务', 'err'); }
+}
+
+// ---------- 智能体 ----------
+function renderList() {
+  agentListEl.innerHTML = '';
+  agents.forEach(a => {
+    const d = document.createElement('div');
+    d.className = 'agent-item' + (a.id === currentId ? ' active' : '');
+    const name = document.createElement('div');
+    name.className = 'aname';
+    name.textContent = brief(a.name, 12);
+    name.title = a.name;
+    const cnt = document.createElement('div');
+    cnt.className = 'acount';
+    cnt.textContent = brief(a.setting, 16) + (a.setting ? ' · ' : '') + (a.count || 0) + ' 条';
+    d.title = a.setting || '';
+    d.appendChild(name); d.appendChild(cnt);
+    d.addEventListener('click', () => {
+      if (expandedAgentId === a.id) { expandedAgentId = ''; renderList(); return; }
+      expandedAgentId = a.id;
+      currentSessionId = a.activeSessionId || (a.sessions && a.sessions[0] && a.sessions[0].id) || '';
+      renderList();
+      selectAgent(a.id, currentSessionId);
+    });
+    agentListEl.appendChild(d);
+    if (expandedAgentId === a.id) {
+      const box = document.createElement('div');
+      box.className = 'agent-sessions open';
+      (a.sessions || []).forEach(ss => {
+        const row = document.createElement('div');
+        row.className = 'sess-item' + (ss.id === currentSessionId ? ' on' : '');
+        const nm = document.createElement('span'); nm.className = 'sname';
+        nm.textContent = '💬 ' + (ss.name || '会话') + ' · ' + (ss.count || 0);
+        const del = document.createElement('span'); del.className = 'sdel'; del.textContent = '✕';
+        row.appendChild(nm); row.appendChild(del);
+        row.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          currentSessionId = ss.id;
+          fetch(API + '/agents/' + a.id + '/sessions/' + ss.id, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ active: true })
+          });
+          selectAgent(a.id, ss.id);
+          renderList();
+        });
+        del.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          if ((a.sessions || []).length <= 1) return;
+          if (!confirm('确定删除该会话吗？该会话的历史消息会一并删除，且不可恢复。')) return;
+          await fetch(API + '/agents/' + a.id + '/sessions/' + ss.id, { method: 'DELETE' });
+          await loadAgents();
+          currentSessionId = '';
+          selectAgent(a.id, '');
+        });
+        box.appendChild(row);
+      });
+      const add = document.createElement('button');
+      add.className = 'sess-add'; add.textContent = '＋ 新建会话';
+      add.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        const r = await fetch(API + '/agents/' + a.id + '/sessions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+        });
+        const d2 = await r.json();
+        if (d2.session) currentSessionId = d2.session.id;
+        await loadAgents();
+        selectAgent(a.id, currentSessionId);
+      });
+      box.appendChild(add);
+      agentListEl.appendChild(box);
+    }
+  });
+}
+async function loadAgents() {
+  try {
+    const r = await fetch(API + '/agents', { method: 'GET' });
+    const data = await r.json();
+    agents = data.agents || [];
+    renderList();
+    if (!agents.length) showEmpty();
+    else if (!currentId || !agents.find(a => a.id === currentId)) await selectAgent(agents[0].id);
+  } catch (e) { setStatus('加载智能体失败', 'err'); }
+}
+function showEmpty() {
+  chatPanelEl.style.display = 'none';
+  emptyEl.style.display = 'flex';
+}
+async function selectAgent(id, sid) {
+  try {
+    if (typeof sid === 'string' && sid) currentSessionId = sid;
+    const [r, sr] = await Promise.all([
+      fetch(API + '/agents/' + id, { method: 'GET' }),
+      fetch(API + '/agents/' + id + '/sessions', { method: 'GET' })
+    ]);
+    const data = await r.json();
+    if (data.error) { setStatus('智能体不存在', 'err'); return; }
+    const a = data.agent;
+    let msgs = a.messages || [];
+    try {
+      const sd = await sr.json();
+      const target = currentSessionId || sd.activeSessionId;
+      const hit = (sd.sessions || []).find(x => x.id === target) || (sd.sessions || [])[0];
+      if (hit) { msgs = hit.messages || []; currentSessionId = hit.id; }
+    } catch (e) { /* 老网关无会话路由时用 a.messages */ }
+    currentId = a.id;
+    agents = agents.map(x => x.id === a.id
+      ? Object.assign({}, x, { name: a.name, setting: a.setting, count: (a.messages || []).length }) : x);
+    renderList();
+    agentNameEl.textContent = brief(a.name, 20);
+    agentNameEl.title = a.name;
+    agentSettingEl.textContent = brief(a.setting, 60) || '无设定';
+    agentSettingEl.title = a.setting || '';
+    chatEl.innerHTML = '';
+    (msgs || []).forEach(m => {
+      const body = splitThink(m.content);
+      const d = addMsg(body, m.role === 'user' ? 'user' : 'ai');
+      // v1.1.18 #3：历史会话重建「回复耗时」标注——后端已把本轮耗时持久化进
+      // 该条消息的 elapsedMs，切换会话不再丢失（受 timingMode 控制，文本与实时同款）。
+      if (timingMode && m.role !== 'user' && m.elapsedMs > 0) {
+        const meta = document.createElement('div');
+        meta.className = 'msg-meta';
+        meta.textContent = '回复耗时 ' + (m.elapsedMs / 1000).toFixed(1) + 's';
+        chatEl.insertBefore(meta, d.nextSibling);
+      }
+    });
+    chatPanelEl.style.display = 'flex';
+    emptyEl.style.display = 'none';
+    setStatus('已连接', 'ok');
+  } catch (e) { setStatus('加载智能体失败', 'err'); }
+}
+function openModal() {
+  editingId = null;
+  modalTitleEl.textContent = '新建智能体';
+  fOkEl.textContent = '创建';
+  fNameEl.value = ''; fSettingEl.value = '';
+  $('agFormTip').textContent = '';   // v1.1.22 #3：清空上次重名提示
+  modalEl.style.display = 'flex';
+}
+function openEdit() {
+  if (!currentId) return;
+  const a = agents.find(x => x.id === currentId);
+  if (!a) return;
+  editingId = currentId;
+  modalTitleEl.textContent = '编辑智能体';
+  fOkEl.textContent = '保存';
+  fNameEl.value = a.name;
+  fSettingEl.value = a.setting || '';
+  $('agFormTip').textContent = '';   // v1.1.22 #3：清空上次重名提示
+  modalEl.style.display = 'flex';
+}
+function closeModal() {
+  editingId = null;
+  modalEl.style.display = 'none';
+}
+function toggleSidebar() { sidebarEl.classList.toggle('collapsed'); }
+async function saveAgent() {
+  const name = fNameEl.value.trim();
+  if (!name) return;
+  const setting = fSettingEl.value.trim();
+  try {
+    let r;
+    if (editingId) {
+      r = await fetch(API + '/agents/' + editingId, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, setting: setting })
+      });
+    } else {
+      r = await fetch(API + '/agents', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, setting: setting })
+      });
+    }
+    const data = await r.json();
+    if (data.agent) {
+      closeModal();
+      await loadAgents();
+      await selectAgent(data.agent.id);
+    } else if (r.status === 409 || data.error === 'name exists') {   // v1.1.22 #3：与技能同款，表单下方提示
+      $('agFormTip').textContent = '智能体名已存在，请换一个名字';
+    }
+  } catch (e) { setStatus('保存失败', 'err'); }
+}
+async function deleteCurrent() {
+  if (!currentId) return;
+  if (!confirm('确定删除该智能体及其所有对话吗？')) return;
+  await fetch(API + '/agents/' + currentId, { method: 'DELETE' });
+  currentId = null;
+  chatEl.innerHTML = '';
+  await loadAgents();
+  if (!agents.length) showEmpty();
+}
+/** 清除当前会话的历史上下文，会话本身保留。 */
+async function clearChat() {
+  if (!currentId) return;
+  if (!confirm('确定清除该会话的历史上下文吗？此会话会保留')) return;
+  try {
+    const r = await fetch(API + '/agents/' + currentId + '/clear', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: currentSessionId })
+    });
+    const data = await r.json();
+    if (data.ok) {
+      chatEl.innerHTML = '';
+      await loadAgents();
+      await selectAgent(currentId);
+    }
+  } catch (e) { setStatus('清除失败', 'err'); }
+}
+async function send() {
+  const text = inputEl.value.trim();
+  const hasAttach = pendingImages.length > 0 || pendingFiles.length > 0;
+  if ((!text && !hasAttach) || busy) return;
+  if (!currentId) { addMsg('请先创建或选择一个智能体', 'err'); return; }
+  busy = true;
+  closeAtList();   // v1.1.20 #2：发送时收起 @ 列表
+  sendBtn.textContent = '取消'; sendBtn.classList.add('cancel'); sendBtn.disabled = false;
+  const tStart = Date.now();
+  pendingAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const attNames = pendingImages.map(x => '🖼 ' + x.name).concat(pendingFiles.map(x => '📄 ' + x.name));
+  const onlyImages = pendingImages.length > 0 && pendingFiles.length === 0;
+  const onlyFiles = pendingFiles.length > 0 && pendingImages.length === 0;
+  // v1.1.20 #1/#3：从「激活 token」(@\u200b名\u200b) 提取被点选的技能名，作为显式激活名单。
+  // 只有点列表产生的 token 才算激活；手打 @1 无零宽标记 → 不激活、不高亮。
+  const activeSkills = [];
+  {
+    const re = /@\u200b([^\u200b]+)\u200b/g;
+    let mm; while ((mm = re.exec(text)) !== null) {
+      const nm = mm[1]; if (activeSkills.indexOf(nm) < 0) activeSkills.push(nm);
+    }
+  }
+  let bubbleText = text || (onlyImages ? '请查看图片' : (onlyFiles ? '请查看附件' : '请查看图片和附件'));
+  if (attNames.length) bubbleText += (bubbleText ? '\n' : '') + attNames.join('\n');
+  inputEl.value = ''; inputEl.style.height = 'auto'; renderInputMirror();
+  addMsg(bubbleText, 'user');
+  const typing = addTyping();              // 先「接收中...」（不带时间）
+  // #6：不再用固定 260ms 定时假装思考。请求真正发出后立即切「思考中」+实时秒数，
+  // 时长完全取决于上游，不写死、不忽悠。
+  let fullPrompt = text;
+  pendingFiles.forEach(f => {
+    fullPrompt += (fullPrompt ? '\n\n' : '') + '--- 附件文件：' + f.name + ' ---\n' + f.text;
+  });
+  const images = pendingImages.map(x => x.data);
+  pendingImages = []; pendingFiles = []; updateAttachHint();
+  try {
+    const req = fetch(API + '/agents/' + currentId + '/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: fullPrompt, channelId: selectedChannelId, model: selectedModel,
+        images: images, sessionId: currentSessionId,
+        // v1.1.20 #1/#3：把"点选激活"的技能名显式传给后端，按名单精确注入提示词；
+        // 手打 @1 不在该名单内 → 后端不注入，彻底根治技能失效与误命中。
+        skills: activeSkills,
+        // v1.1.15 #5：思考等级传参开关关闭时不传等级，避免上游不认识该参数
+        reasoningEffort: reasoningParamMode ? reasoningEffort : '' }),
+      signal: pendingAbort ? pendingAbort.signal : undefined
+    });
+    // 请求已发出（不是定时器）：切到「思考中」，计时从此刻起真实累计
+    if (typing.parentNode) startThinkingTimer(typing, tStart);
+    const r = await req;
+    const data = await r.json();
+    const tFirst = Date.now();
+    stopTypingTimer();
+    // #14：直接把「思考中」气泡原地变成回答气泡，不删除再新建，消除消息刷新感
+    typing.className = 'msg ai';
+    typing.innerHTML = '';
+    bindLongPress(typing);   // v1.1.15 #6：新回答气泡同样支持长按
+    const parsed = parseAnswer(data.answer || '');
+    const answer = parsed.body;
+    const failed = !!data.error || answer.startsWith('请求失败')
+      || answer === 'AI返回空内容' || answer.startsWith('未配置上游')
+      || answer.startsWith('内置模型不支持图片识别');
+    if (failed) {
+      typing.remove();
+      addMsg(data.error || answer, 'err');
+    } else {
+      const toolCalls = data.toolCalls || [];
+      // v1.1.15 #4：耗时标注放在气泡「外」——独立 .msg-meta 行紧跟气泡，背景=聊天背景
+      const attachMeta = (genMs) => {
+        const meta = buildReplyMeta(tStart, tFirst, genMs);
+        if (!meta) return;
+        let m = typing.nextSibling && typing.nextSibling.className === 'msg-meta'
+          ? typing.nextSibling : null;
+        if (!m) {
+          m = document.createElement('div');
+          m.className = 'msg-meta';
+          if (typing.parentNode) typing.parentNode.insertBefore(m, typing.nextSibling);
+        }
+        m.textContent = meta;
+      };
+      if (streamMode && answer.length > 0) {
+        let pos = 0;
+        const step = Math.max(2, Math.ceil(answer.length / 40));
+        const genStart = Date.now();
+        renderAnswerInto(typing, parsed, '', toolCalls);
+        const iv = setInterval(() => {
+          pos = Math.min(answer.length, pos + step);
+          renderAnswerInto(typing, parsed, answer.slice(0, pos), toolCalls);
+          scrollBottom();
+          if (pos >= answer.length) {
+            clearInterval(iv);
+            // #8：用动画真实耗时，不再写 0.0 秒 / 估算值
+            attachMeta(Date.now() - genStart);
+          }
+        }, 24);
+      } else {
+        renderAnswerInto(typing, parsed, undefined, toolCalls);
+        attachMeta(0);
+      }
+      if (data.agent) {
+        agents = agents.map(x => x.id === data.agent.id ? data.agent : x);
+        renderList();
+      }
+    }
+  } catch (e) {
+    stopTypingTimer();
+    typing.remove();
+    if (e && e.name === 'AbortError') { addMsg('已取消生成', 'err'); }
+    else { addMsg('请求失败：' + (e && e.message ? e.message : e), 'err'); setStatus('请求失败', 'err'); }
+  }
+  busy = false; pendingAbort = null;
+  sendBtn.textContent = '发送'; sendBtn.classList.remove('cancel'); sendBtn.disabled = false;
+  scrollBottom();
+}
+/** #8 回复底部标注：只显示真实可测的时间。非流式没有「生成」阶段就不写 0.0 秒；
+ *  tokens 上下文因上游普遍不返回 usage，已按需求删掉该功能。 */
+function buildReplyMeta(tStart, tFirst, genMs) {
+  if (!timingMode) return '';
+  // v1.1.15 #4：只标注本轮回复总耗时，不再拆「首字 + 输出」
+  const total = Math.max(0, (tFirst || Date.now()) - tStart) + Math.max(0, genMs || 0);
+  return '回复耗时 ' + (total / 1000).toFixed(1) + 's';
+}
+/** #12 点「取消」中断本次请求，并通知网关把「用户取消了本轮生成」写进上下文，
+ *  让之后的 AI 确知这条用户消息存在但本轮未完成（消息本身在网关入口已落库）。 */
+function onSendCancel() {
+  if (!busy) return;
+  if (pendingAbort) { try { pendingAbort.abort(); } catch (e) {} }
+  pendingAbort = null;
+  if (currentId) {
+    try {
+      fetch(API + '/agents/' + currentId + '/interrupt', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: currentSessionId, note: '用户取消了本轮生成' })
+      });
+    } catch (e) { /* 通知失败不阻塞本地取消 */ }
+  }
+}
+
+// ---------- 渠道 ----------
+function currentChannel() {
+  return channels.find(c => c.id === selectedChannelId) || channels[0] || null;
+}
+function channelModels(c) {
+  if (!c) return [];
+  const list = (c.models || []).slice();
+  if (c.model && list.indexOf(c.model) < 0) list.unshift(c.model);
+  return list.length ? list : (c.locked ? [c.name || '内置模型'] : []);
+}
+/** #11 收起时按钮显示「当前模型名」首字符（gpt-4o→g）；内置模型显示「内」。 */
+function channelInitial(c) {
+  if (!c) return '内';
+  if (c.locked || c.id === 'builtin' || !selectedModel) return '内';
+  const name = String(selectedModel || '');
+  return name ? Array.from(name)[0] : (Array.from(c.name || '')[0] || '内');
+}
+function currentModelLabel() {
+  const c = currentChannel();
+  const list = channelModels(c);
+  if (!list.length) return '';
+  return (list.indexOf(selectedModel) >= 0 ? selectedModel : (c && c.model) || list[0]) || '';
+}
+function updateModelSub() {
+  const c = currentChannel();
+  const m = currentModelLabel();
+  // #1 内置模型没有渠道，只显示「内置模型」，不出现「内置模型·内置模型」
+  if (!c || c.locked || c.id === 'builtin') { modelSubEl.textContent = '模型：内置模型'; return; }
+  modelSubEl.textContent = '模型：' + c.name + (m ? ' · ' + m : '');
+}
+function renderChannelTrigger() {
+  const c = currentChannel();
+  channelTrigger.textContent = channelInitial(c);
+  channelTrigger.title = (c ? c.name : '内置模型') + ' · ' + (currentModelLabel() || '切换渠道模型');
+  updateModelSub();
+}
+let pickerOutsideListener = null;
+function closeChannelPicker() {
+  channelPicker.style.display = 'none';
+  channelTrigger.className = '';
+  if (pickerOutsideListener && document.removeEventListener) {
+    document.removeEventListener('click', pickerOutsideListener, true);
+    pickerOutsideListener = null;
+  }
+}
+function openChannelPicker() {
+  // 补充：点随机空白页或搜索框即可收起（监听由 closeChannelPicker 统一清理）
+  closeChannelPicker();
+  const outside = (ev) => {
+    if (channelPicker.contains && channelPicker.contains(ev.target)) return;
+    if (ev.target === channelTrigger) return;
+    closeChannelPicker();
+  };
+  pickerOutsideListener = outside;
+  if (document.addEventListener) document.addEventListener('click', outside, true);
+  channelPicker.innerHTML = '';
+  // v1.1.15 #5 结构：模型思考等级（标题+右侧开关）→ 5 档 → 分割线 → 选择渠道与模型 → 众多渠道
+  const effortRow = document.createElement('div');
+  effortRow.id = 'effortRow';
+  const eHead = document.createElement('div');
+  eHead.className = 'e-head';
+  const eTitle = document.createElement('div');
+  eTitle.className = 'e-title'; eTitle.textContent = '模型思考等级';
+  const eSwitch = document.createElement('div');
+  eSwitch.id = 'effortSwitch';
+  eSwitch.className = 'switch' + (reasoningParamMode ? ' on' : '');
+  eSwitch.setAttribute('role', 'switch');
+  eHead.appendChild(eTitle); eHead.appendChild(eSwitch);
+  effortRow.appendChild(eHead);
+  const eList = document.createElement('div');
+  eList.className = 'e-list';
+  const paintEffort = () => {
+    Array.prototype.forEach.call(eList.children, x => {
+      // 开关关闭时：5 档都不可点、都不变蓝（off 半透明）
+      x.className = (!reasoningParamMode ? 'off' : (x.title === reasoningEffort ? 'on' : ''));
+      x.disabled = !reasoningParamMode;
+    });
+    eSwitch.className = 'switch' + (reasoningParamMode ? ' on' : '');
+  };
+  EFFORT_LEVELS.forEach(lv => {
+    const b = document.createElement('button');
+    b.textContent = lv.t; b.title = lv.v;
+    b.addEventListener('click', () => {
+      if (!reasoningParamMode) return;   // 关闭时不可点
+      reasoningEffort = lv.v;
+      paintEffort();
+      try {
+        fetch(API + '/prefs', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reasoningEffort: lv.v }) });
+      } catch (e) { /* 忽略 */ }
+    });
+    eList.appendChild(b);
+  });
+  effortRow.appendChild(eList);
+  // 开关：默认关；关闭时不传 reasoning_effort 参数，5 档不可点不变蓝
+  eSwitch.addEventListener('click', () => {
+    reasoningParamMode = !reasoningParamMode;
+    paintEffort();
+    try {
+      fetch(API + '/prefs', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reasoningParamOn: reasoningParamMode }) });
+    } catch (e) { /* 忽略 */ }
+  });
+  paintEffort();
+  channelPicker.appendChild(effortRow);
+  // 分割线
+  const sep = document.createElement('div');
+  sep.className = 'pk-sep';
+  channelPicker.appendChild(sep);
+  // 分割线下方的分区标题
+  const title = document.createElement('div');
+  title.className = 'pk-title';
+  title.textContent = '选择渠道与模型（点渠道名展开/收起）';
+  channelPicker.appendChild(title);
+  const list = channels.filter(c => c.enabled || c.locked);
+  list.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'pk-ch' + (c.id === selectedChannelId ? ' on' : '');
+    const arrow = document.createElement('span');
+    arrow.className = 'arrow';
+    arrow.textContent = '▸';
+    btn.appendChild(document.createTextNode(c.name + ' '));
+    btn.appendChild(arrow);
+    // 补充需求：内置模型无模型可展开 → 点它直接选中，不展开
+    const isBuiltin = c.locked || c.id === 'builtin';
+    if (isBuiltin) arrow.textContent = '';
+    btn.addEventListener('click', () => {
+      if (isBuiltin) { chooseChannel(c.id, ''); closeChannelPicker(); return; }
+      const box = channelPicker.querySelector('[data-models-for="' + c.id + '"]');
+      if (box) {
+        const open = box.classList.toggle('open');
+        arrow.textContent = open ? '▾' : '▸';
+      }
+    });
+    channelPicker.appendChild(btn);
+    const wrap = document.createElement('div');
+    wrap.className = 'pk-models';
+    wrap.setAttribute('data-models-for', c.id);
+    channelModels(c).forEach(m => {
+      const mb = document.createElement('button');
+      mb.className = 'pk-model' + (c.id === selectedChannelId && m === currentModelLabel() ? ' on' : '');
+      mb.textContent = '· ' + m;
+      mb.addEventListener('click', () => { chooseChannel(c.id, m); closeChannelPicker(); });
+      wrap.appendChild(mb);
+    });
+    if (!isBuiltin) channelPicker.appendChild(wrap);
+  });
+  channelPicker.style.display = 'block';
+  channelTrigger.className = 'on';
+}
+/** ④⑦ 选中渠道下任意模型；options 写入 /prefs，重启后恢复最后一次调用的选择。 */
+function chooseChannel(id, model) {
+  selectedChannelId = id;
+  const c = currentChannel();
+  const list = channelModels(c);
+  selectedModel = model && list.indexOf(model) >= 0 ? model : (c && c.model) || (list[0] || '');
+  renderChannelTrigger();
+  try {
+    fetch(API + '/prefs', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lastChannelId: selectedChannelId, lastModel: selectedModel })
+    });
+  } catch (e) { /* 网页预览版无此路由，忽略 */ }
+}
+async function loadChannels() {
+  try {
+    const r = await fetch(API + '/channels', { method: 'GET' });
+    if (!r.ok) return;
+    const data = await r.json();
+    channels = data.channels || [];
+    if (!channels.some(c => c.id === selectedChannelId)) selectedChannelId = data.defaultId || 'builtin';
+    const c = currentChannel();
+    const list = channelModels(c);
+    if (list.indexOf(selectedModel) < 0) selectedModel = (c && c.model) || (list[0] || '');
+    renderChannelTrigger();
+    renderChannelList();
+  } catch (e) { /* 网页预览版无此路由，忽略 */ }
+}
+/** 重启后从 /prefs 读回最后一次使用的渠道 + 模型。 */
+async function loadLastChannel() {
+  try {
+    const r = await fetch(API + '/prefs', { method: 'GET' });
+    if (!r.ok) return;
+    const p = await r.json();
+    if (p.lastChannelId) selectedChannelId = p.lastChannelId;
+    if (p.lastModel) selectedModel = p.lastModel;
+    renderChannelTrigger();
+  } catch (e) { /* 网页预览版无此路由，忽略 */ }
+}
+function renderChannelList() {
+  channelListEl.innerHTML = '';
+  channels.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'ch-item';
+    const main = document.createElement('div');
+    main.className = 'ch-main';
+    const nm = document.createElement('div');
+    nm.className = 'ch-name';
+    nm.textContent = c.name;
+    if (c.locked) {
+      const b = document.createElement('span');
+      b.className = 'badge on'; b.textContent = '内置 · 默认启用';
+      nm.appendChild(b);
+    } else {
+      const b = document.createElement('span');
+      b.className = 'badge' + (c.enabled ? ' on' : '');
+      b.textContent = c.enabled ? '已启用' : '已停用';
+      nm.appendChild(b);
+    }
+    const meta = document.createElement('div');
+    meta.className = 'ch-meta';
+    meta.textContent = c.locked ? '直连本地网关，无需配置'
+      : (c.baseUrl || '未填地址') + (c.model ? ' · ' + c.model : ' · 未填模型');
+    main.appendChild(nm); main.appendChild(meta);
+    row.appendChild(main);
+    if (!c.locked) {
+      const toggle = document.createElement('button');
+      toggle.textContent = c.enabled ? '停用' : '启用';
+      toggle.addEventListener('click', () => toggleChannel(c.id, !c.enabled));
+      const edit = document.createElement('button');
+      edit.textContent = '编辑';
+      edit.addEventListener('click', () => openChannelForm(c));
+      const del = document.createElement('button');
+      del.className = 'danger'; del.textContent = '删除';
+      del.addEventListener('click', () => deleteChannel(c.id));
+      row.appendChild(toggle); row.appendChild(edit); row.appendChild(del);
+    }
+    channelListEl.appendChild(row);
+  });
+}
+async function toggleChannel(id, enabled) {
+  await fetch(API + '/channels/' + id + '/enable', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: enabled })
+  });
+  await loadChannels();
+}
+async function deleteChannel(id) {
+  if (!confirm('确定删除这个渠道吗？')) return;
+  await fetch(API + '/channels/' + id, { method: 'DELETE' });
+  await loadChannels();
+}
+async function openChannelForm(c) {
+  editingChannelId = c ? c.id : null;
+  // v1.1.21 #5：重新进入渠道表单时，候选勾选要恢复成「上次保存的全部 models」（而非仅当前启用模型），
+  // 这样再次拉取模型时，上次勾选的模型才保持蓝色高亮、与保存时一致。
+  candidateModels = [];
+  if (c && Array.isArray(c.models)) {
+    c.models.forEach(function (m) { if (m && candidateModels.indexOf(m) < 0) candidateModels.push(m); });
+  }
+  if (c && c.model && candidateModels.indexOf(c.model) < 0) candidateModels.unshift(c.model);
+  // v1.1.20 #7：键盘弹起(adjustResize)下 WebView 偶发在 fixed 合成层之间露缝，
+  // 透出下层设置页的「＋添加渠道」。打开表单时把下层 #settingsPage 直接 visibility
+  // 隐藏——即使有重绘缝隙也只剩同色背景，不再透字。保留原 body 级 fixed 修复。
+  settingsPageEl.style.visibility = 'hidden';
+  $('chForm').style.display = 'block';
+  $('chFormTitle').textContent = c ? '编辑渠道' : '添加渠道';
+  $('chName').value = c ? c.name : '';
+  $('chProvider').value = c ? (c.providerId || '') : '';
+  $('chBaseUrl').value = c ? (c.baseUrl || '') : '';
+  $('chApiKey').value = '';
+  $('chApiKey').style.webkitTextSecurity = 'disc';
+  renderKeyEye(true);    // #4 默认掩码（＊）→ 眼睛 + 红色右斜杠
+  $('chModel').value = c ? modelsToText(c) : '';
+  $('modelCandidateRow').style.display = 'none';
+  $('modelCandidates').innerHTML = '';
+  // ⑨ 编辑已有渠道时回显已存密钥（掩码显示，眼睛可切换明文）；列表接口仍不回显
+  if (c && c.id) {
+    try {
+      const r = await fetch(API + '/channels/' + c.id + '/key', { method: 'GET' });
+      const d = await r.json();
+      if (d && d.apiKey) $('chApiKey').value = d.apiKey;
+      $('chHint').textContent = '';   // #3 不再显示任何密钥提示文案
+    } catch (e) { $('chHint').textContent = ''; }
+  } else $('chHint').textContent = '';
+}
+function closeChannelForm() {
+  editingChannelId = null;
+  candidateModels = [];
+  $('chForm').style.display = 'none';
+  settingsPageEl.style.visibility = '';   // v1.1.20 #7：恢复下层设置页
+  $('chApiKey').value = '';
+}
+/** ③ 点候选模型切换是否填入该渠道的 models 列表，可同时保留多个。 */
+function toggleModelCandidate(m) {
+  const i = candidateModels.indexOf(m);
+  if (i >= 0) candidateModels.splice(i, 1);
+  else candidateModels.push(m);
+  if (candidateModels.length && candidateModels.indexOf($('chModel').value.trim()) < 0) {
+    $('chModel').value = candidateModels[0];
+  }
+  const box = $('modelCandidates');
+  Array.prototype.forEach.call(box.children, b => {
+    b.className = candidateModels.indexOf(b.textContent) >= 0 ? 'on' : '';
+  });
+  $('chHint').textContent = candidateModels.length
+    ? '已选 ' + candidateModels.length + ' 个模型：' + candidateModels.join('、')
+    : '未选择模型，可手动填写模型名。';
+}
+function modelsToText(c) {
+  const list = (c && c.models) ? c.models.slice() : [];
+  const cur = c ? (c.model || '') : '';
+  if (cur && list.indexOf(cur) < 0) list.unshift(cur);
+  return list.join(',');
+}
+function textToModels(text) {
+  return String(text || '').split(',').map(x => x.trim()).filter(x => x.length > 0);
+}
+async function saveChannel() {
+  const name = $('chName').value.trim();
+  if (!name) { $('chHint').textContent = '请填写渠道名称'; return; }
+  const names = textToModels($('chModel').value);
+  const model = names.length ? names[0] : '';
+  // v1.1.20 #6：以「模型名」文本框为唯一真相存 models，不再并入 candidateModels 勾选并集。
+  // 否则在文本框把模型1改成模型3后，候选里残留的模型1会被重新并回（表现为 1,2,3 而非 2,3）。
+  const models = names;
+  const payload = {
+    name: name,
+    providerId: $('chProvider').value || '',
+    baseUrl: $('chBaseUrl').value.trim(),
+    apiKey: $('chApiKey').value.trim(),
+    model: model,
+    models: models
+  };
+  try {
+    const url = editingChannelId ? API + '/channels/' + editingChannelId : API + '/channels';
+    const r = await fetch(url, {
+      method: editingChannelId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    if (!r.ok || data.error) { $('chHint').textContent = '保存失败：' + (data.error || r.status); return; }
+    closeChannelForm();
+    await loadChannels();
+  } catch (e) { $('chHint').textContent = '保存失败：' + e.message; }
+}
+/** ③ 拉取上游 /models；点「拉取模型」后弹出滑动列表（需求⑥）：搜索/全选/重置/多选。 */
+async function pullModels() {
+  // v1.1.16：一律用「表单里当前填的 Base URL / Key」去探测。
+  // 旧版编辑渠道时走 GET /channels/<id>/models，用的是库里已保存的旧地址，
+  // 用户在输入框里改了地址完全不生效（表现为换任何 URL 都拿到同一份模型列表）。
+  $('chHint').textContent = '正在拉取模型…';
+  try {
+    const r = await fetch(API + '/channels/probe', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseUrl: $('chBaseUrl').value.trim(), apiKey: $('chApiKey').value.trim() })
+    });
+    const data = await r.json();
+    if (!r.ok || data.error) { $('chHint').textContent = '拉取失败：' + (data.error || r.status); return; }
+    pickerModels = data.models || [];
+    pickerSelected = candidateModels.slice();
+    $('mpTitle').textContent = '共 ' + pickerModels.length + ' 个模型，勾选后点确定';
+    $('mpSearch').value = '';
+    renderModelPicker();
+    $('modelPicker').style.display = 'flex';
+    $('chHint').textContent = pickerModels.length
+      ? '共 ' + pickerModels.length + ' 个模型，可搜索/全选/重置，确定后保存到渠道。'
+      : '上游未返回模型列表，可手动填写模型名。';
+  } catch (e) { $('chHint').textContent = '拉取失败：' + e.message; }
+}
+/** 需求⑥：渲染模型浮层（搜索过滤 + 勾选高亮）。 */
+function renderModelPicker() {
+  const q = $('mpSearch').value.trim().toLowerCase();
+  const box = $('mpList');
+  box.innerHTML = '';
+  const shown = pickerModels.filter(m => !q || m.toLowerCase().indexOf(q) >= 0);
+  if (!shown.length) {
+    const d = document.createElement('div');
+    d.className = 'mp-empty';
+    d.textContent = q ? '无匹配模型' : '列表为空';
+    box.appendChild(d);
+    return;
+  }
+  shown.forEach(m => {
+    const b = document.createElement('button');
+    b.textContent = m;
+    if (pickerSelected.indexOf(m) >= 0) b.className = 'on';
+    b.addEventListener('click', () => {
+      const i = pickerSelected.indexOf(m);
+      if (i >= 0) pickerSelected.splice(i, 1); else pickerSelected.push(m);
+      b.className = pickerSelected.indexOf(m) >= 0 ? 'on' : '';
+    });
+    box.appendChild(b);
+  });
+}
+function closeModelPicker(apply) {
+  $('modelPicker').style.display = 'none';
+  if (apply) {
+    candidateModels = pickerSelected.slice();
+    if (candidateModels.length) $('chModel').value = candidateModels.join(',');
+    $('chHint').textContent = candidateModels.length
+      ? '已选 ' + candidateModels.length + ' 个模型，保存渠道后生效。'
+      : '未选择模型，可手动填写模型名。';
+  }
+}
+
+// ---------- 需求⑫1 提供商 + 需求③ 工具/插件页 + 需求⑨⑩ 聊天输入辅助 ----------
+async function loadProviders() {
+  try {
+    const r = await fetch(API + '/providers', { method: 'GET' });
+    if (!r.ok) return;
+    providers = (await r.json()).providers || [];
+    const sel = $('chProvider');
+    sel.innerHTML = '';
+    const g1 = document.createElement('optgroup'); g1.label = '通用兼容';
+    const g2 = document.createElement('optgroup'); g2.label = '专用提供商';
+    providers.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name;
+      (p.general ? g1 : g2).appendChild(o);
+    });
+    sel.appendChild(g1); sel.appendChild(g2);
+  } catch (e) { /* 提供商接口不可用时保持空 */ }
+}
+/** 选提供商自动填官方默认 Base URL 与模型名（可手改）。 */
+function onProviderChange() {
+  // #2 选完提供商：用与渠道名一致的蓝色高亮，去掉原生黄色焦点框
+  $('chProvider').className = 'picked';
+  const id = $('chProvider').value;
+  const p = providers.find(x => x.id === id);
+  if (!p) return;
+  // 需求⑥：每次换提供商都刷新默认 URL 与模型，不保留上一家的残留
+  $('chBaseUrl').value = p.baseUrl || '';
+  $('chModel').value = p.model || '';
+  if (p.id === 'anthropic-openai') {
+    $('chHint').textContent = 'Anthropic 通用需填写支持 /chat/completions 的兼容中转地址；原生协议请选「Anthropic（Claude）」。';
+  } else {
+    $('chHint').textContent = p.baseUrl ? '已填入默认地址，可手动修改。' : '请填写 Base URL。';
+  }
+}
+/** #4 密钥眼睛图标：显示时是眼睛，掩码（＊）时是眼睛 + 红色右斜杠。 */
+function renderKeyEye(masked) {
+  const eye = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" '
+    + 'stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/>'
+    + '<circle cx="12" cy="12" r="2.6"/></svg>';
+  const slash = '<path d="M4 20 L20 4" stroke="#ef4444" stroke-width="2.4" '
+    + 'stroke-linecap="round"/>';
+  $('chKeyEye').innerHTML = masked ? eye.replace('</svg>', slash + '</svg>') : eye;
+  $('chKeyEye').title = masked ? '密钥已隐藏（点击显示）' : '密钥已显示（点击隐藏）';
+}
+/** 需求④：正常键盘输入 + 自定义掩码，眼睛按钮切换明文/密文。 */
+function toggleKeyVisible() {
+  const el = $('chApiKey');
+  const masked = el.style.webkitTextSecurity !== 'none';
+  el.style.webkitTextSecurity = masked ? 'none' : 'disc';
+  renderKeyEye(!masked);
+}
+async function loadTools() {
+  try {
+    const r = await fetch(API + '/tools', { method: 'GET' });
+    if (!r.ok) return;
+    toolItems = (await r.json()).tools || [];
+    renderToolList();
+  } catch (e) { /* 忽略 */ }
+}
+function renderToolList() {
+  const box = $('toolList');
+  box.innerHTML = '';
+  toolItems.forEach(t => {
+    const row = document.createElement('div');
+    row.className = 'sk-item';
+    const main = document.createElement('div');
+    main.className = 'sk-main';
+    const nm = document.createElement('div');
+    nm.className = 'sk-name';
+    nm.textContent = '@' + t.name;
+    const meta = document.createElement('div');
+    meta.className = 'sk-meta';
+    meta.textContent = t.desc || '';
+    main.appendChild(nm); main.appendChild(meta);
+    row.appendChild(main);
+    box.appendChild(row);
+  });
+}
+function openTools() {
+  $('toolsPage').style.display = 'flex';
+  closeChannelPicker(); closePlusMenu(); closeAtList();
+  loadTools();
+}
+function closeTools() { $('toolsPage').style.display = 'none'; }
+function openPlugins() {
+  $('pluginsPage').style.display = 'flex';
+  closeChannelPicker(); closePlusMenu(); closeAtList();
+}
+function closePlugins() { $('pluginsPage').style.display = 'none'; }
+
+// ---------- 需求⑩：+ 菜单 ----------
+let plusOutsideListener = null;
+function openPlusMenu() {
+  $('plusMenu').style.display = 'block';
+  $('plusBtn').className = 'on';   // v1.1.22 #2：与渠道按钮同款，仅展开时亮蓝框
+  // #19 与渠道列表一致：点空白 / 输入框收起，监听由 closePlusMenu 统一清理
+  const outside = (ev) => {
+    if ($('plusMenu').contains && $('plusMenu').contains(ev.target)) return;
+    if (ev.target === $('plusBtn')) return;
+    closePlusMenu();
+  };
+  plusOutsideListener = outside;
+  if (document.addEventListener) document.addEventListener('click', outside, true);
+}
+function closePlusMenu() {
+  $('plusMenu').style.display = 'none';
+  $('plusBtn').className = '';   // v1.1.22 #2：收起时去掉蓝框，与渠道按钮同款
+  if (plusOutsideListener && document.removeEventListener) {
+    document.removeEventListener('click', plusOutsideListener, true);
+    plusOutsideListener = null;
+  }
+}
+function pickImage() {
+  closePlusMenu();
+  if (window.AppBridge && window.AppBridge.pickImage) {
+    window.AppBridge.pickImage('onImagePicked');
+  } else { addMsg('当前环境不支持选择图片', 'err'); }
+}
+function pickFile() {
+  closePlusMenu();
+  if (window.AppBridge && window.AppBridge.pickFile) {
+    window.AppBridge.pickFile('onFilePicked');
+  } else { addMsg('当前环境不支持选择文件', 'err'); }
+}
+/** 原生回调：图片 data URL 入队。 */
+function onImagePicked(payload) {
+  if (!payload) { addMsg('图片过大或读取失败', 'err'); return; }
+  const obj = typeof payload === 'string' ? { name: 'image.jpg', data: payload } : payload;
+  if (!obj.data) { addMsg('图片过大或读取失败', 'err'); return; }
+  pendingImages.push(obj);
+  updateAttachHint();
+}
+/** 原生回调：文件内容入队（payload 可为字符串或 {name,text,error}）。 */
+function onFilePicked(payload) {
+  const obj = typeof payload === 'string' ? { name: '附件.txt', text: payload } : payload;
+  if (!obj || obj.error) { addMsg(obj && obj.error ? obj.error : '文件读取失败', 'err'); return; }
+  pendingFiles.push(obj);
+  updateAttachHint();
+}
+/** 需求⑧：发送后清空提示；未发送时列出附件名，便于回看历史。 */
+function updateAttachHint() {
+  const names = pendingImages.map(x => '🖼 ' + x.name).concat(pendingFiles.map(x => '📄 ' + x.name));
+  $('barHint').textContent = names.length
+    ? names.join(' · ') + ' · 发送时随消息上传'
+    : '＋ 附件 · @ 引用技能/工具 · 点首字母切换渠道模型';
+}
+/** + 菜单里的技能/工具/插件：把引用名填入输入框（技能为 @名，工具/插件为 @名 说明需在工具页了解用法）。 */
+function quickInsert(kind) {
+  closePlusMenu();
+  // #18 插件与技能/工具一样弹列表（暂无插件时显示「暂无插件」），不再跳插件页
+  inputEl.value += '@';
+  inputEl.focus();
+  showAtList('', kind === '工具' ? '工具' : (kind === '插件' ? '插件' : '技能'));
+}
+
+// ---------- 需求⑨：@ 引用列表（需求② 类型标识、需求③ 按入口分类） ----------
+let atScope = '';   // '' = 全部（输入 @ 触发）；'技能' / '工具' = + 菜单指定入口
+// v1.1.20 #2：列表弹出后，点空白/发送/其它键即收起（不再只能点列表项才关）。
+let atOutsideListener = null;
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function renderInputMirror() {
+  const m = $('inputMirror');
+  if (!m) return;
+  const v = inputEl.value;
+  let out = '';
+  let p = 0;
+  for (let i = 0; i < v.length; i++) {
+    if (v[i] === '@' && i + 1 < v.length && v[i + 1] === '\u200b') {
+      const end = v.indexOf('\u200b', i + 2);
+      if (end > i + 1) {
+        out += escHtml(v.slice(p, i));
+        out += '<span class="hl">' + escHtml(v.slice(i, end + 1)) + '</span>';
+        i = end; p = end + 1;
+      }
+    }
+  }
+  out += escHtml(v.slice(p)) + '\u200b';   // 末尾零宽：保证换行与 textarea 完全一致
+  m.innerHTML = out;
+  m.scrollTop = inputEl.scrollTop;
+}
+function ensureAtOutside() {
+  if (atOutsideListener) return;
+  atOutsideListener = (ev) => {
+    const list = $('atList');
+    if (list.contains && list.contains(ev.target)) return;
+    if (ev.target === inputEl) return;   // 点输入框继续打字由 input 事件管理
+    closeAtList();
+  };
+  if (document.addEventListener) document.addEventListener('click', atOutsideListener, true);
+}
+function collectAtItems() {
+  const items = [];
+  // #18 '插件' 作用域只返回插件（当前为空），不能把技能/工具混进来
+  if (!atScope || atScope === '技能') skills.forEach(s => items.push({ name: s.name, kind: '技能', cls: 'k-skill' }));
+  if (!atScope || atScope === '工具') toolItems.forEach(t => items.push({ name: t.name, kind: '工具', cls: 'k-tool' }));
+  if (!atScope || atScope === '插件') (plugins || []).forEach(p => items.push({ name: p.name, kind: '插件', cls: 'k-plugin' }));
+  return items;
+}
+function showAtList(filter, scope) {
+  if (typeof scope === 'string') atScope = scope;
+  const list = $('atList');
+  const q = (filter || '').toLowerCase();
+  const items = collectAtItems().filter(x => !q || x.name.toLowerCase().indexOf(q) >= 0);
+  list.innerHTML = '';
+  if (!items.length) {
+    // #18 插件入口即便为空也要弹列表，明确显示「暂无插件」
+    if (atScope === '插件' || atScope === '技能' || atScope === '工具') {
+      const empty = document.createElement('div');
+      empty.className = 'at-title';
+      empty.textContent = '暂无' + atScope;
+      list.appendChild(empty); list.style.display = 'block'; ensureAtOutside();
+    } else list.style.display = 'none';
+    return;
+  }
+  const title = document.createElement('div');
+  title.className = 'at-title';
+  title.textContent = atScope ? ('选择要引用的' + atScope + '（仅显示' + atScope + '）')
+    : '选择要引用的技能 / 工具';
+  list.appendChild(title);
+  items.forEach(x => {
+    const b = document.createElement('button');
+    b.innerHTML = x.name + ' <span class="at-kind ' + x.cls + '">' + x.kind + '</span>';
+    b.addEventListener('click', () => {
+      // v1.1.20 #1/#3：仅"点列表项"才把光标前的 @片段 替换成「激活 token」——
+      // 形式为 @(零宽空格)技能名(零宽空格)。零宽空格是激活标记：
+      //   ① 镜像层据此渲染黄色高亮；② 后端据此精确注入提示词（手打 @1 无此标记不触发）；
+      //   ③ 随消息 content 持久化，切会话后历史气泡仍能重建高亮。
+      const pos = inputEl.selectionStart;
+      const before = inputEl.value.slice(0, pos);
+      const at = before.lastIndexOf('@');
+      const token = '@\u200b' + x.name + '\u200b';
+      if (at >= 0) {
+        inputEl.value = before.slice(0, at) + token + ' ' + inputEl.value.slice(pos);
+        inputEl.selectionStart = inputEl.selectionEnd = at + token.length + 1;
+      } else {
+        inputEl.value = inputEl.value.slice(0, pos) + token + ' ' + inputEl.value.slice(pos);
+        inputEl.selectionStart = inputEl.selectionEnd = pos + token.length + 1;
+      }
+      renderInputMirror();
+      list.style.display = 'none';
+      closeAtList();   // v1.1.20 #2：选中后收起列表
+      inputEl.focus();
+    });
+    list.appendChild(b);
+  });
+  list.style.display = 'block'; ensureAtOutside();
+}
+function closeAtList() {
+  $('atList').style.display = 'none';
+  if (atOutsideListener && document.removeEventListener) {
+    document.removeEventListener('click', atOutsideListener, true);
+    atOutsideListener = null;
+  }
+}
+// 需求⑤：软键盘弹起时底栏三选项不占位，避免遮住正在输入的字段
+function bindKeyboardGuard() {
+  const setKbd = (on) => { document.body.classList[on ? 'add' : 'remove']('kbd-open'); };
+  document.addEventListener('focusin', (e) => {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) setKbd(true);
+  });
+  document.addEventListener('focusout', (e) => {
+    setTimeout(() => {
+      const a = document.activeElement;
+      if (!a || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) setKbd(false);
+    }, 120);
+  });
+}
+inputEl.addEventListener('input', () => {
+  const pos = inputEl.selectionStart;
+  const before = inputEl.value.slice(0, pos);
+  const at = before.lastIndexOf('@');
+  if (at >= 0 && !/\s/.test(before.slice(at + 1))) showAtList(before.slice(at + 1), '');
+  else closeAtList();
+});
+
+// ---------- 设置页 / 个性化 / 关于 ----------
+function switchTab(name) {
+  ['Models', 'Personal', 'About'].forEach(n => {
+    const on = n === name;
+    $('tab' + n).className = on ? 'sec on' : 'sec';
+    $('tabBtn' + n).className = on ? 'on' : '';
+  });
+}
+/** 用 /channels 探测：只有 App 本地网关有此路由，网页预览版自动隐藏设置入口。 */
+async function loadSettings() {
+  try {
+    const r = await fetch(API + '/channels', { method: 'GET' });
+    if (!r.ok) return;
+    await r.json();
+    settingsBtnEl.style.display = 'block';
+  } catch (e) { /* 探测失败即隐藏，网页版不受影响 */ }
+}
+function openSettings() {
+  settingsPageEl.style.display = 'flex';
+  switchTab('Models');
+  loadChannels();
+  loadPrefs();
+  loadAbout();
+}
+function closeSettings() { settingsPageEl.style.display = 'none'; }
+function applyTheme(theme) {
+  currentTheme = theme === 'dark' ? 'dark' : 'light';
+  document.body.className = currentTheme === 'dark' ? 'dark' : '';
+  $('themeLightBtn').className = currentTheme === 'light' ? 'on' : '';
+  $('themeDarkBtn').className = currentTheme === 'dark' ? 'on' : '';
+  if (window.AppBridge && window.AppBridge.setBars) window.AppBridge.setBars(currentTheme);
+}
+async function loadPrefs() {
+  try {
+    const r = await fetch(API + '/prefs', { method: 'GET' });
+    if (!r.ok) { applyTheme('light'); return; }
+    const d = await r.json();
+    applyTheme(d.theme || 'light');
+    // #8 个性化开关默认全开（老 prefs 里显式写 false 才关）
+    streamMode = d.stream !== false;
+    agentLoopMode = d.agentLoop !== false;
+    timingMode = d.showTiming !== false;
+    reasoningEffort = d.reasoningEffort || 'high';
+    // v1.1.15 #5：思考等级传参开关默认关，用独立键避免旧 prefs 干扰
+    reasoningParamMode = d.reasoningParamOn === true;
+    // v1.1.15 #4：显示工具调用默认关（旧 prefs 里显式 true 才开）
+    showToolMode = d.showToolCalls === true;
+    userProfileOn = d.userProfileOn !== false;
+    $('streamSwitch').className = 'switch' + (streamMode ? ' on' : '');
+    $('loopSwitch').className = 'switch' + (showToolMode ? ' on' : '');
+    $('timingSwitch').className = 'switch' + (timingMode ? ' on' : '');
+  } catch (e) { applyTheme('light'); }
+}
+async function togglePref(key, val) {
+  try {
+    await fetch(API + '/prefs', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: val })
+    });
+  } catch (e) { /* 忽略 */ }
+}
+function bindOptionSwitches() {
+  $('streamSwitch').addEventListener('click', () => {
+    streamMode = !streamMode;
+    $('streamSwitch').className = 'switch' + (streamMode ? ' on' : '');
+    togglePref('stream', streamMode);
+  });
+  // v1.1.15 #4：工具自动执行已内置开启不提醒，此开关只控制「显示工具调用」
+  $('loopSwitch').addEventListener('click', () => {
+    showToolMode = !showToolMode;
+    $('loopSwitch').className = 'switch' + (showToolMode ? ' on' : '');
+    togglePref('showToolCalls', showToolMode);
+  });
+  $('timingSwitch').addEventListener('click', () => {
+    timingMode = !timingMode;
+    $('timingSwitch').className = 'switch' + (timingMode ? ' on' : '');
+    togglePref('showTiming', timingMode);
+  });
+}
+async function chooseTheme(theme) {
+  applyTheme(theme);
+  try {
+    await fetch(API + '/prefs', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ theme: currentTheme })
+    });
+    $('themeHint').textContent = currentTheme === 'dark' ? '已切换为深色' : '已切换为浅色';
+  } catch (e) { $('themeHint').textContent = '主题已临时切换，保存失败：' + e.message; }
+}
+async function loadAbout() {
+  try {
+    const r = await fetch(API + '/about', { method: 'GET' });
+    if (!r.ok) return;
+    const d = await r.json();
+    $('aboutUrl').textContent = d.projectUrl || 'https://github.com/asd11288k/xiao-zhushou';
+    $('aboutAuthor').textContent = d.author || '子兮';
+    $('aboutVersion').textContent = d.version || '1.1.22';
+  } catch (e) { /* 保留 HTML 里的默认值 */ }
+}
+
+// ---------- #17 用户设定 ----------
+function openUserPage() {
+  $('userPage').style.display = 'flex';
+  closeChannelPicker(); closePlusMenu(); closeAtList();
+  loadUserProfile();
+}
+function closeUserPage() { $('userPage').style.display = 'none'; }
+async function loadUserProfile() {
+  try {
+    const r = await fetch(API + '/profile', { method: 'GET' });
+    if (!r.ok) return;
+    const d = await r.json();
+    userProfileOn = d.enabled !== false;
+    $('userSetting').value = d.content || '';
+    $('userProfileSwitch').className = 'switch' + (userProfileOn ? ' on' : '');
+  } catch (e) { /* 网页预览版无此路由，忽略 */ }
+}
+async function saveUserProfile() {
+  const content = $('userSetting').value;
+  try {
+    const r = await fetch(API + '/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content, enabled: userProfileOn }) });
+    const d = await r.json();
+    $('userHint').textContent = r.ok ? '已保存' : '保存失败';
+  } catch (e) { $('userHint').textContent = '保存失败：' + e.message; }
+}
+
+// ---------- ⑤ 技能管理 ----------
+function openSkills() {
+  skillsPageEl.style.display = 'flex';
+  $('skForm').style.display = 'none';
+  $('skillsBody').style.display = '';   // v1.1.19 #1：进入技能页确保列表可见（防御上次遗留）
+  closeChannelPicker();
+  loadSkills();
+}
+function closeSkills() { skillsPageEl.style.display = 'none'; }
+async function loadSkills() {
+  try {
+    const r = await fetch(API + '/skills', { method: 'GET' });
+    if (!r.ok) return;
+    skills = (await r.json()).skills || [];
+    renderSkillList();
+  } catch (e) { /* 网页预览版无此路由，忽略 */ }
+}
+function renderSkillList() {
+  skillListEl.innerHTML = '';
+  skills.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'sk-item';
+    const main = document.createElement('div');
+    main.className = 'sk-main';
+    const nm = document.createElement('div');
+    nm.className = 'sk-name';
+    nm.textContent = '@' + s.name;
+    const meta = document.createElement('div');
+    meta.className = 'sk-meta';
+    meta.textContent = (s.note || '无备注') + ' · ' + (s.prompt || '').slice(0, 30);
+    meta.title = s.prompt || '';
+    main.appendChild(nm); main.appendChild(meta);
+    row.appendChild(main);
+    const edit = document.createElement('button');
+    edit.textContent = '编辑';
+    edit.addEventListener('click', () => openSkillForm(s));
+    const del = document.createElement('button');
+    del.className = 'danger'; del.textContent = '删除';
+    del.addEventListener('click', () => deleteSkill(s.id));
+    row.appendChild(edit); row.appendChild(del);
+    skillListEl.appendChild(row);
+  });
+}
+function openSkillForm(s) {
+  editingSkillId = s ? s.id : null;
+  // v1.1.19 #1：技能表单为 #skillsPage 内 flex:1 覆盖卡片——打开时隐藏技能列表区
+  // (#skillsBody)，表单占满顶栏以下并内部滚动；返回栏 #skillsBar 始终露出、不被遮挡。
+  $('skillsBody').style.display = 'none';
+  $('skForm').style.display = 'block';
+  $('skFormTitle').textContent = s ? '编辑技能' : '新建技能';
+  $('skName').value = s ? s.name : '';
+  $('skNote').value = s ? (s.note || '') : '';
+  $('skPrompt').value = s ? (s.prompt || '') : '';
+  $('skFormTip').textContent = '';
+}
+function closeSkillForm() {
+  editingSkillId = null;
+  $('skForm').style.display = 'none';
+  $('skillsBody').style.display = '';   // v1.1.19 #1：表单收起后恢复技能列表区
+}
+async function saveSkill() {
+  const name = $('skName').value.trim();
+  const prompt = $('skPrompt').value.trim();
+  if (!name) { $('skFormTip').textContent = '请填写技能名称'; return; }
+  if (!prompt) { $('skFormTip').textContent = '请填写提示词'; return; }
+  const payload = { name: name, note: $('skNote').value.trim(), prompt: prompt };
+  try {
+    const url = editingSkillId ? API + '/skills/' + editingSkillId : API + '/skills';
+    const r = await fetch(url, {
+      method: editingSkillId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    if (!r.ok || data.error) {
+      // v1.1.21 #2：重名时给出明确提示
+      $('skFormTip').textContent = (r.status === 409 || data.error === 'name exists')
+        ? '技能名已存在，请换一个名字' : '保存失败：' + (data.error || r.status);
+      return;
+    }
+    closeSkillForm();
+    await loadSkills();
+  } catch (e) { $('skFormTip').textContent = '保存失败：' + e.message; }
+}
+async function deleteSkill(id) {
+  if (!confirm('确定删除这个技能吗？')) return;
+  await fetch(API + '/skills/' + id, { method: 'DELETE' });
+  await loadSkills();
+}
+
+// ---------- ⑥ 手机返回键状态机 ----------
+/** 由 MainActivity.onKeyDown 通过 javascript: 调用：逐级关闭，聊天页才二次确认退出。 */
+function onHardwareBack() {
+  // ⑪ 渠道表单是覆盖式浮层，返回键必须先收它
+  if ($('msgEdit').style.display === 'flex') { $('msgEdit').style.display = 'none'; return; }
+  if ($('msgMenu').style.display === 'block') { closeMsgMenu(); return; }
+  if ($('skForm').style.display === 'flex' || $('skForm').style.display === 'block') { closeSkillForm(); return; }
+  if ($('userPage').style.display === 'flex') { closeUserPage(); return; }
+  if ($('chForm').style.display === 'block') { closeChannelForm(); return; }
+  if (channelPicker.style.display === 'block') { closeChannelPicker(); return; }
+  if ($('modelPicker').style.display === 'flex') { closeModelPicker(false); return; }
+  if ($('plusMenu').style.display === 'block') { closePlusMenu(); return; }
+  if ($('atList').style.display === 'block') { closeAtList(); return; }
+  if (modalEl.style.display === 'flex') { closeModal(); return; }
+  if ($('toolsPage').style.display === 'flex') { closeTools(); return; }
+  if ($('pluginsPage').style.display === 'flex') { closePlugins(); return; }
+  if (skillsPageEl.style.display === 'flex') { closeSkills(); return; }
+  if (settingsPageEl.style.display === 'flex') { closeSettings(); return; }
+  if (!sidebarEl.classList.contains('collapsed')) { sidebarEl.classList.add('collapsed'); return; }
+  if (window.AppBridge && window.AppBridge.exitApp) window.AppBridge.exitApp();
+  else if (confirm('确定退出小助手吗？')) window.close();
+}
+
+// ---------- 事件绑定 ----------
+newAgentBtn.addEventListener('click', openModal);
+fOkEl.addEventListener('click', saveAgent);
+fCancelEl.addEventListener('click', closeModal);
+toggleBtn.addEventListener('click', toggleSidebar);
+editAgentBtn.addEventListener('click', openEdit);
+delAgentBtn.addEventListener('click', deleteCurrent);
+clearChatBtn.addEventListener('click', clearChat);
+sendBtn.addEventListener('click', () => { if (busy) onSendCancel(); else send(); });
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  else if (e.key === 'Escape') { closeAtList(); }   // v1.1.20 #2：Esc 收起 @ 列表
+});
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+  renderInputMirror();   // v1.1.20 #3：正文/删除时同步重绘黄色高亮镜像层
+});
+inputEl.addEventListener('scroll', () => {
+  const m = $('inputMirror'); if (m) m.scrollTop = inputEl.scrollTop;   // 镜像层跟随滚动
+});
+channelTrigger.addEventListener('click', () => {
+  if (channelPicker.style.display === 'block') closeChannelPicker();
+  else openChannelPicker();
+});
+settingsBtnEl.addEventListener('click', openSettings);
+settingsBackBtn.addEventListener('click', closeSettings);
+skillBtnEl.addEventListener('click', openSkills);
+$('userBtn').addEventListener('click', openUserPage);
+$('userBackBtn').addEventListener('click', closeUserPage);
+$('userSaveBtn').addEventListener('click', saveUserProfile);
+$('userProfileSwitch').addEventListener('click', () => {
+  userProfileOn = !userProfileOn;
+  $('userProfileSwitch').className = 'switch' + (userProfileOn ? ' on' : '');
+  try { fetch(API + '/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: userProfileOn }) }); } catch (e) { /* 忽略 */ }
+});
+$('mmCopy').addEventListener('click', () => { copyMsgText(msgMenuText()); closeMsgMenu(); });
+$('mmEdit').addEventListener('click', () => {
+  $('meText').value = msgMenuText();
+  $('msgEdit').style.display = 'flex';
+  closeMsgMenu();
+});
+$('mmDel').addEventListener('click', () => {
+  const idx = msgMenuIdx; closeMsgMenu(); deleteHistoryMessage(idx);
+});
+$('meCancel').addEventListener('click', () => { $('msgEdit').style.display = 'none'; });
+$('meSave').addEventListener('click', saveMsgEdit);
+skillsBackBtn.addEventListener('click', closeSkills);
+$('addSkillBtn').addEventListener('click', () => openSkillForm(null));
+$('skCancelBtn').addEventListener('click', closeSkillForm);
+$('skSaveBtn').addEventListener('click', saveSkill);
+$('tabBtnModels').addEventListener('click', () => switchTab('Models'));
+$('tabBtnPersonal').addEventListener('click', () => switchTab('Personal'));
+$('tabBtnAbout').addEventListener('click', () => switchTab('About'));
+$('addChannelBtn').addEventListener('click', () => openChannelForm(null));
+$('chCancelBtn').addEventListener('click', closeChannelForm);
+$('chSaveBtn').addEventListener('click', saveChannel);
+$('pullModelsBtn').addEventListener('click', pullModels);
+$('themeLightBtn').addEventListener('click', () => chooseTheme('light'));
+$('themeDarkBtn').addEventListener('click', () => chooseTheme('dark'));
+// 需求③：工具/插件入口
+$('toolBtn').addEventListener('click', openTools);
+$('toolsBackBtn').addEventListener('click', closeTools);
+$('pluginBtn').addEventListener('click', openPlugins);
+$('pluginsBackBtn').addEventListener('click', closePlugins);
+// 需求⑩：+ 菜单
+$('plusBtn').addEventListener('click', () => {
+  if ($('plusMenu').style.display === 'block') closePlusMenu();
+  else { closeAtList(); closeChannelPicker(); openPlusMenu(); }
+});
+$('pmImage').addEventListener('click', pickImage);
+$('pmFile').addEventListener('click', pickFile);
+$('pmSkill').addEventListener('click', () => quickInsert('技能'));
+$('pmTool').addEventListener('click', () => quickInsert('工具'));
+$('pmPlugin').addEventListener('click', () => quickInsert('插件'));
+// 需求⑥：模型浮层
+$('mpSearch').addEventListener('input', renderModelPicker);
+$('mpAllBtn').addEventListener('click', () => {
+  const q = $('mpSearch').value.trim().toLowerCase();
+  pickerModels.filter(m => !q || m.toLowerCase().indexOf(q) >= 0).forEach(m => {
+    if (pickerSelected.indexOf(m) < 0) pickerSelected.push(m);
+  });
+  renderModelPicker();
+});
+$('mpResetBtn').addEventListener('click', () => {
+  const q = $('mpSearch').value.trim().toLowerCase();
+  if (q) {
+    pickerSelected = pickerSelected.filter(m => m.toLowerCase().indexOf(q) < 0);
+  } else pickerSelected = [];
+  renderModelPicker();
+});
+$('mpOkBtn').addEventListener('click', () => closeModelPicker(true));
+// 需求⑫1：提供商变更自动填默认
+$('chProvider').addEventListener('change', onProviderChange);
+$('chKeyEye').addEventListener('click', toggleKeyVisible);
+bindKeyboardGuard();
+bindOptionSwitches();
+
+checkHealth();
+loadSettings();
+loadChannels();
+loadLastChannel();
+loadPrefs();
+loadAgents();
+loadProviders();
+loadTools();
+</script>
+</body>
+</html>

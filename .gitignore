@@ -1,0 +1,27 @@
+# 构建产物与中间文件
+android-app/build/
+android-app/dist/
+*.idsig
+*.class
+
+# 签名密钥（绝不入库）
+keystore.jks
+*.jks
+*.keystore
+
+# 运行期数据 / 隐私
+agents.json
+profile.json
+prefs.json
+settings.json
+channels.json
+skills.json
+toolfiles/
+server.log
+*.log
+
+# 历史备份与原型
+*.bak
+__pycache__/
+.operit/
+.backup/
