@@ -90,7 +90,7 @@ public class CoreTest {
         eq("rawText=null 返回空串", "", Core.extractAnswer(null));
 
         System.out.println("[Store] 智能体 CRUD + 落盘重载");
-        File tmp = File.createTempFile("doubao_store_", ".json");
+        File tmp = File.createTempFile("helper_store_", ".json");
         tmp.delete();
         Store st = new Store(new File(tmp.getParentFile(), "agents_" + System.nanoTime() + ".json"));
         eq("初始为空", 0, st.agents().length());
