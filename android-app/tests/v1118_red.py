@@ -2,7 +2,8 @@
 # v1.1.18 红测试：三件事写成静态断言（先 FAIL 再修，最终全绿）。
 import re, sys
 
-ROOT = '/data/user/0/com.ai.assistance.operit/files/workspace/doubao/'
+import os
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/'
 HTML = open(ROOT + 'index.html', encoding='utf-8').read()
 STORE = open(ROOT + 'android-app/src/com/helper/app/Store.java', encoding='utf-8').read()
 GW = open(ROOT + 'android-app/src/com/helper/app/LocalGateway.java', encoding='utf-8').read()
