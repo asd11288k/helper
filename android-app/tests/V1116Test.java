@@ -1,13 +1,13 @@
 // v1.1.16 后端契约红测试：讯飞 MaaS 真实适配（不再硬编码模型清单 / 完整端点不重复拼接 / 404 文案不误导）。
 // 编译：javac -cp libs/json.jar:/tmp/v1114tests -d /tmp/v1114tests tests/V1116Test.java
 // 运行：java -cp libs/json.jar:/tmp/v1114tests V1116Test
-import com.doubao.app.Channels;
-import com.doubao.app.LocalGateway;
-import com.doubao.app.Providers;
-import com.doubao.app.Settings;
-import com.doubao.app.Skills;
-import com.doubao.app.Store;
-import com.doubao.app.Tools;
+import com.helper.app.Channels;
+import com.helper.app.LocalGateway;
+import com.helper.app.Providers;
+import com.helper.app.Settings;
+import com.helper.app.Skills;
+import com.helper.app.Store;
+import com.helper.app.Tools;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -130,13 +130,13 @@ public class V1116Test {
                 && new JSONObject(body(r2)).optJSONArray("models").length() > 0);
 
         System.out.println("[3] #1 对话请求也不能把 chat/completions 拼两次");
-        String ans = com.doubao.app.OpenAiClient.chat(full, "ak-test", "spark-x2.6",
+        String ans = com.helper.app.OpenAiClient.chat(full, "ak-test", "spark-x2.6",
                 "你好", new JSONArray(), "", "");
         ok("对话成功拿到上游答案（" + ans + "）", ans.contains("答案F"));
         ok("上游收到的路径是 /v2/chat/completions（实际=" + f.lastPath + "）",
                 "/v2/chat/completions".equals(f.lastPath));
         String plain = "http://127.0.0.1:" + f.port() + "/v2";
-        String ans2 = com.doubao.app.OpenAiClient.chat(plain, "ak-test", "spark-x2.6",
+        String ans2 = com.helper.app.OpenAiClient.chat(plain, "ak-test", "spark-x2.6",
                 "你好", new JSONArray(), "", "");
         ok("只填 /v2 根路径也能正常对话", ans2.contains("答案F"));
         ok("根路径自动补成 /v2/chat/completions（实际=" + f.lastPath + "）",
@@ -151,11 +151,11 @@ public class V1116Test {
         ok("文案带上真实请求地址便于排查", body(bad).contains("models"));
         // 404 文案：区分「缺版本段」与「核对模型名」，且不再武断 /v1（用真返回 404 的假上游）
         Fake f404 = new Fake(); f404.forceCode = 404;
-        String noVer = com.doubao.app.OpenAiClient.chat(
+        String noVer = com.helper.app.OpenAiClient.chat(
                 "http://127.0.0.1:" + f404.port(), "k", "m", "hi", new JSONArray(), "", "");
         ok("缺版本段的 404 会指出缺少 /v1 或 /v2（实际=" + noVer + "）",
                 noVer.contains("404") && noVer.contains("版本段"));
-        String withVer = com.doubao.app.OpenAiClient.chat(
+        String withVer = com.helper.app.OpenAiClient.chat(
                 "http://127.0.0.1:" + f404.port() + "/v2", "k", "m", "hi", new JSONArray(), "", "");
         ok("有版本段的 404 指向核对模型名（实际=" + withVer + "）",
                 withVer.contains("404") && withVer.contains("模型名"));
@@ -181,8 +181,8 @@ public class V1116Test {
         String lr = http(v + "/channels/" + lcid + "/models", "GET", null);
         ok("不可达渠道不再假装成功返回固定清单", lr.startsWith("4"));
 
-        System.out.println("[7] 版本 /about = 1.1.22");
-        ok("/about 版本 1.1.22", body(http(v + "/about", "GET", null)).contains("1.1.22"));
+        System.out.println("[7] 版本 /about = 1.1.23");
+        ok("/about 版本 1.1.23", body(http(v + "/about", "GET", null)).contains("1.1.23"));
 
         gw.stop();
         cf.delete(); sf.delete(); af.delete(); skf.delete();

@@ -1,6 +1,6 @@
 // Channels 纯 JVM 单测：内置渠道置顶/不可编辑、CRUD、密钥不回显、损坏文件降级
-// 编译：javac -cp libs/json.jar -d tests/out tests/ChannelsTest.java src/com/doubao/app/Channels.java
-import com.doubao.app.Channels;
+// 编译：javac -cp libs/json.jar -d tests/out tests/ChannelsTest.java src/com/helper/app/Channels.java
+import com.helper.app.Channels;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

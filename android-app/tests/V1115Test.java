@@ -1,13 +1,13 @@
 // v1.1.15 后端契约红测试：讯飞无 /models 端点返回内置清单 / 搜索并发早停+提速 / 版本。
 // 编译：javac -cp libs/json.jar:/tmp/v1114tests -d /tmp/v1114tests tests/V1115Test.java
 // 运行：java -cp libs/json.jar:/tmp/v1114tests V1115Test
-import com.doubao.app.Channels;
-import com.doubao.app.LocalGateway;
-import com.doubao.app.Providers;
-import com.doubao.app.Settings;
-import com.doubao.app.Skills;
-import com.doubao.app.Store;
-import com.doubao.app.Tools;
+import com.helper.app.Channels;
+import com.helper.app.LocalGateway;
+import com.helper.app.Providers;
+import com.helper.app.Settings;
+import com.helper.app.Skills;
+import com.helper.app.Store;
+import com.helper.app.Tools;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

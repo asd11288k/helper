@@ -1,10 +1,10 @@
 // 纯 JVM 单元测试：Core（上游协议/设定注入/流式解析）+ Store（持久化）
-// 编译：javac -cp libs/json.jar -d tests/out tests/CoreTest.java src/com/doubao/app/Core.java src/com/doubao/app/Store.java
+// 编译：javac -cp libs/json.jar -d tests/out tests/CoreTest.java src/com/helper/app/Core.java src/com/helper/app/Store.java
 // 运行：java -cp libs/json.jar:tests/out CoreTest
 import org.json.JSONArray;
 import org.json.JSONObject;
-import com.doubao.app.Core;
-import com.doubao.app.Store;
+import com.helper.app.Core;
+import com.helper.app.Store;
 
 import java.io.File;
 

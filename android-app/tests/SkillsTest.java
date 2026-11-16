@@ -1,7 +1,7 @@
 // 纯 JVM 单元测试：Skills 持久化 + @技能名 提示词解析
-// 编译：javac -cp libs/json.jar -d tests/out3 tests/SkillsTest.java src/com/doubao/app/Skills.java
+// 编译：javac -cp libs/json.jar -d tests/out3 tests/SkillsTest.java src/com/helper/app/Skills.java
 // 运行：java -cp libs/json.jar:tests/out3 SkillsTest
-import com.doubao.app.Skills;
+import com.helper.app.Skills;
 import org.json.JSONObject;
 
 import java.io.File;

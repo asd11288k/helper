@@ -1,4 +1,4 @@
-package com.doubao.app;
+package com.helper.app;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,7 +32,7 @@ public final class LocalGateway {
 
     /** 操作手册（需求⑮ / v1.1.14 #20）：使用说明 + 底层实现 + 工程师技能索引。 */
     public static String manual() {
-        return "【小助手 App 操作手册 v1.1.22】\n"
+        return "【小助手 App 操作手册 v1.1.23】\n"
                 + "■ 索引（按关键词查对应段落）：\n"
                 + "  · 界面/按钮/怎么点/在哪设置 → 看「软件使用说明」\n"
                 + "  · 代码/类/路由/数据/构建/实现原理 → 看「底层代码实现」\n"
@@ -74,7 +74,7 @@ public final class LocalGateway {
                 + "每条结果带真实 source，失败的源如实记进 errors/sources，绝不混编；"
                 + "fetch_web(url)、read_file(path)、write_file(path,content)、list_files()、now(tz)。"
                 + "文件工具只在私有 toolfiles/ 沙箱内操作，禁止 .. 越界与可执行后缀。"
-                + "沙箱绝对地址：/data/data/com.doubao.app/files/toolfiles/（即 getFilesDir()/toolfiles）；"
+                + "沙箱绝对地址：/data/data/com.helper.app/files/toolfiles/（即 getFilesDir()/toolfiles）；"
                 + "用户要绝对地址就给这个真实路径，不要说『只认沙箱但不知道在哪』。\n"
                 + "■ 工程师技能调用信息（遇到任务按此流程，不许跳步）\n"
                 + "关键词→动作：『修 bug / 报错 / 复现 / 偶发 / 回归』→ diagnosing-bugs 六阶段："
@@ -575,8 +575,8 @@ public final class LocalGateway {
         }
         if ("/about".equals(path)) {
             JSONObject o = new JSONObject();
-            try { o.put("version", "1.1.22").put("author", "子兮")
-                  .put("projectUrl", "https://github.com/asd11288k/xiao-zhushou"); }
+            try { o.put("version", "1.1.23").put("author", "子兮")
+                  .put("projectUrl", "https://github.com/asd11288k/helper"); }
             catch (JSONException ignored) {}
             return json(200, o);
         }

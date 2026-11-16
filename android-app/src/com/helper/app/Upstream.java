@@ -1,4 +1,4 @@
-package com.doubao.app;
+package com.helper.app;
 
 /**
  * v1.1.16：上游地址归一化。

@@ -1,11 +1,11 @@
 // 纯 JVM 单元测试：Settings + OpenAiClient + LocalGateway
-// 编译：javac -cp libs/json.jar -d tests/out tests/DTest.java src/com/doubao/app/*.java（Android 类需 android.jar）
+// 编译：javac -cp libs/json.jar -d tests/out tests/DTest.java src/com/helper/app/*.java（Android 类需 android.jar）
 // 运行：java -cp libs/json.jar:tests/out DTest
-import com.doubao.app.Settings;
-import com.doubao.app.OpenAiClient;
-import com.doubao.app.LocalGateway;
-import com.doubao.app.Store;
-import com.doubao.app.Channels;
+import com.helper.app.Settings;
+import com.helper.app.OpenAiClient;
+import com.helper.app.LocalGateway;
+import com.helper.app.Store;
+import com.helper.app.Channels;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -233,9 +233,9 @@ public class DTest {
         ok("内置可拉取（只给自身）", http(v + "/channels/builtin/models", "GET", null).contains("内置模型"));
 
         String ab = http(v + "/about", "GET", null);
-        ok("关于页版本号 1.1.22", ab.contains("\"version\":\"1.1.22\""));
+        ok("关于页版本号 1.1.23", ab.contains("\"version\":\"1.1.23\""));
         ok("关于页作者子兮", ab.contains("子兮"));
-        ok("关于页项目地址 GitHub", ab.contains("https://github.com/asd11288k/xiao-zhushou"));
+        ok("关于页项目地址 GitHub", ab.contains("https://github.com/asd11288k/helper"));
 
         String p0 = http(v + "/prefs", "GET", null);
         ok("主题默认浅色", p0.contains("\"theme\":\"light\""));
@@ -302,8 +302,8 @@ public class DTest {
         File a3f = new File(d3, "agents.json"), skf = new File(d3, "skills.json");
         File tdir = new File(d3, "toolfiles");
         LocalGateway gw3 = new LocalGateway(new Settings(s3f), new Store(a3f),
-                "<h1>D3</h1>".getBytes("UTF-8"), new Channels(c3f), new com.doubao.app.Skills(skf),
-                new com.doubao.app.Tools(tdir));
+                "<h1>D3</h1>".getBytes("UTF-8"), new Channels(c3f), new com.helper.app.Skills(skf),
+                new com.helper.app.Tools(tdir));
         gw3.start();
         String w = "http://127.0.0.1:" + gw3.port();
 
@@ -365,8 +365,8 @@ public class DTest {
         String esc = http(w + "/tools", "POST", "{\"id\":\"read_file\",\"args\":{\"path\":\"../t.txt\"}}");
         ok("③ 路径 .. 被沙箱拒绝", esc.contains("不允许"));
         String ab2 = http(w + "/about", "GET", null);
-        ok("⑫ 关于页版本 1.1.22", ab2.contains("1.1.22"));
-        ok("⑫ 关于页项目地址", ab2.contains("github.com/asd11288k/xiao-zhushou"));
+        ok("⑫ 关于页版本 1.1.23", ab2.contains("1.1.23"));
+        ok("⑫ 关于页项目地址", ab2.contains("github.com/asd11288k/helper"));
         fake5.close(); gw3.stop();
         c3f.delete(); s3f.delete(); a3f.delete(); skf.delete(); new File(d3, "prefs.json").delete();
         new File(tdir, "t.txt").delete(); tdir.delete(); d3.delete();

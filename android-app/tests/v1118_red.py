@@ -4,8 +4,8 @@ import re, sys
 
 ROOT = '/data/user/0/com.ai.assistance.operit/files/workspace/doubao/'
 HTML = open(ROOT + 'index.html', encoding='utf-8').read()
-STORE = open(ROOT + 'android-app/src/com/doubao/app/Store.java', encoding='utf-8').read()
-GW = open(ROOT + 'android-app/src/com/doubao/app/LocalGateway.java', encoding='utf-8').read()
+STORE = open(ROOT + 'android-app/src/com/helper/app/Store.java', encoding='utf-8').read()
+GW = open(ROOT + 'android-app/src/com/helper/app/LocalGateway.java', encoding='utf-8').read()
 MAN = open(ROOT + 'android-app/AndroidManifest.xml', encoding='utf-8').read()
 
 pass_n = fail_n = 0

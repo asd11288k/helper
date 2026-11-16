@@ -133,7 +133,7 @@ let prefs = { theme: 'light', lastChannelId: '', lastModel: '', stream: true, ag
   showToolCalls: false, userProfileOn: true };
 let profile = { content: '', enabled: true };
 let skills = [];
-const about = { version: '1.1.22', author: '子兮', projectUrl: 'https://github.com/asd11288k/xiao-zhushou' };
+const about = { version: '1.1.23', author: '子兮', projectUrl: 'https://github.com/asd11288k/helper' };
 let settingsMode = 'app';   // 'web' 模拟网页预览版无 /channels 路由（App 独有）
 let lastChatBody = null, lastPrefsPut = null, lastProbeBody = null, lastChannelPut = null;
 let lastBarTheme = null, exitCalls = 0, choicePrefsPut = null;
@@ -592,9 +592,9 @@ function findItemByText(container, text) {
   console.log('\n[17] 关于：项目地址 GitHub / 作者子兮 / 版本号 1.1.12');
   elements.tabBtnAbout.dispatch('click', {});
   await sleep(20);
-  assert(elements.aboutUrl.textContent === 'https://github.com/asd11288k/xiao-zhushou', '项目地址');
+  assert(elements.aboutUrl.textContent === 'https://github.com/asd11288k/helper', '项目地址');
   assert(elements.aboutAuthor.textContent === '子兮', '作者为子兮');
-  assert(elements.aboutVersion.textContent === '1.1.22', '版本号为 1.1.22');
+  assert(elements.aboutVersion.textContent === '1.1.23', '版本号为 1.1.23');
 
   console.log('\n[18] 设置页可返回聊天');
   elements.settingsBackBtn.dispatch('click', {});
@@ -788,7 +788,7 @@ function findItemByText(container, text) {
   assert(script.includes('splitThink') && script.includes('showThinkMode'), '显示思考过程开关');
   // ⑦ 关于页副标题
   assert(HTML.includes('简单对话助手'), '关于页副标题改为简单对话助手');
-  assert(HTML.includes('id="aboutVersion">1.1.22<'), '关于页版本 1.1.22');
+  assert(HTML.includes('id="aboutVersion">1.1.23<'), '关于页版本 1.1.23');
   // ⑩ 模型名逗号相连，支持手动改
   assert(script.includes("modelsToText") && script.includes("join(',')") && script.includes("textToModels"),
     '多模型用英文逗号相连且可手动修改');
@@ -952,7 +952,7 @@ function findItemByText(container, text) {
   assert(elements.plusMenu.style.display === 'none', '#19 点输入框收起加号列表');
   assert((document._docListeners['click'] || []).length < beforePlus, '#19 收起后监听被清理');
   // #20 操作手册索引与证据红线（后端由 V1114Test 覆盖，这里确认前端版本）
-  assert(HTML.includes('id="aboutVersion">1.1.22<'), '#20 / 版本对齐 1.1.22');
+  assert(HTML.includes('id="aboutVersion">1.1.23<'), '#20 / 版本对齐 1.1.23');
 
   // ---- 行为：思考等级点选写 prefs、用户页保存 ----
   elements.channelTrigger.dispatch('click', {});
@@ -1037,7 +1037,7 @@ function findItemByText(container, text) {
   assert(HTML.includes('关于用户的设定') && !HTML.includes('关于我的设定'), '#8 用户页标题改「关于用户的设定」');
   assert(!/id="userSetting"[^>]*placeholder/.test(HTML), '#8 用户设定输入框注释已删');
   // 版本
-  assert(HTML.includes('id="aboutVersion">1.1.22<'), '版本对齐 1.1.22');
+  assert(HTML.includes('id="aboutVersion">1.1.23<'), '版本对齐 1.1.23');
 
   console.log('\n[31] v1.1.16：讯飞 MaaS 适配（拉取模型走表单当前值）');
   assert(script.includes("fetch(API + '/channels/probe'"), '#1 拉取模型统一走 /channels/probe（表单当前值）');
@@ -1046,7 +1046,7 @@ function findItemByText(container, text) {
   assert(!script.includes('需以 /v1 结尾'), '#1 不再误导成「Base URL 需以 /v1 结尾」');
   assert(script.includes('reasoningParamOn'), '#1 既有思考等级开关未被破坏');
   // 版本
-  assert(HTML.includes('id="aboutVersion">1.1.22<'), '版本对齐 1.1.22');
+  assert(HTML.includes('id="aboutVersion">1.1.23<'), '版本对齐 1.1.23');
 
   console.log('\n' + (failures === 0 ? '全部通过 ✅' : failures + ' 项失败 ❌'));
   process.exit(failures === 0 ? 0 : 1);

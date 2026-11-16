@@ -14,7 +14,7 @@ AJAR=${AJAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}
 DX=${DX:-/usr/lib/android-sdk/build-tools/debian/dx}
 OUT=build
 DIST=dist
-PKG=com.doubao.app
+PKG=com.helper.app
 
 for c in aapt javac keytool zipalign apksigner; do
   command -v "$c" >/dev/null 2>&1 || { echo "缺少命令: $c"; exit 1; }
@@ -57,12 +57,12 @@ if [ ! -f keystore.jks ]; then
     -validity 10000 -storepass doubao123 -keypass doubao123 -dname "CN=Doubao Local" > "$OUT/key.log" 2>&1 || fail keytool "$OUT/key"
 fi
 step "apksigner"; apksigner sign --ks keystore.jks --ks-pass pass:doubao123 --key-pass pass:doubao123 \
-  --out "$DIST/doubao.apk" "$OUT/bin/aligned.apk" > "$OUT/sign.log" 2>&1 || fail sign "$OUT/sign"
+  --out "$DIST/helper.apk" "$OUT/bin/aligned.apk" > "$OUT/sign.log" 2>&1 || fail sign "$OUT/sign"
 echo OK
 
-step "verify"; apksigner verify --verbose "$DIST/doubao.apk" > "$OUT/verify.log" 2>&1 || fail verify "$OUT/verify"
+step "verify"; apksigner verify --verbose "$DIST/helper.apk" > "$OUT/verify.log" 2>&1 || fail verify "$OUT/verify"
 V1=$(grep -c 'v1 scheme.*true' "$OUT/verify.log"); V2=$(grep -c 'v2 scheme.*true' "$OUT/verify.log")
 echo "OK (v1=$V1 v2=$V2)"
-echo "DEX=$(unzip -l "$DIST/doubao.apk" | grep classes.dex | awk '{print $1}') bytes"
-echo "APK=$DIST/doubao.apk  $(stat -c%s "$DIST/doubao.apk") bytes"
-echo "-- badging --"; aapt dump badging "$DIST/doubao.apk" | head -3
+echo "DEX=$(unzip -l "$DIST/helper.apk" | grep classes.dex | awk '{print $1}') bytes"
+echo "APK=$DIST/helper.apk  $(stat -c%s "$DIST/helper.apk") bytes"
+echo "-- badging --"; aapt dump badging "$DIST/helper.apk" | head -3

@@ -1,14 +1,14 @@
 // v1.1.14 后端契约测试：取消/失败不丢上下文、长按编辑、并发搜索、思考等级、用户设定、工具 trace、手册。
 // 编译：javac -cp libs/json.jar:/tmp/v1114tests -d /tmp/v1114tests tests/V1114Test.java
 // 运行：java -cp libs/json.jar:/tmp/v1114tests V1114Test
-import com.doubao.app.AgentLoop;
-import com.doubao.app.Channels;
-import com.doubao.app.LocalGateway;
-import com.doubao.app.OpenAiClient;
-import com.doubao.app.Settings;
-import com.doubao.app.Skills;
-import com.doubao.app.Store;
-import com.doubao.app.Tools;
+import com.helper.app.AgentLoop;
+import com.helper.app.Channels;
+import com.helper.app.LocalGateway;
+import com.helper.app.OpenAiClient;
+import com.helper.app.Settings;
+import com.helper.app.Skills;
+import com.helper.app.Store;
+import com.helper.app.Tools;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -185,7 +185,7 @@ public class V1114Test {
         ok("提示词长度受控（<4000）", guide.length() < 4000);
 
         System.out.println("[10] 版本 /about = 1.1.14");
-        ok("/about 版本 1.1.22", body(http(v + "/about", "GET", null)).contains("1.1.22"));
+        ok("/about 版本 1.1.23", body(http(v + "/about", "GET", null)).contains("1.1.23"));
 
         gw.stop();
         cf.delete(); sf.delete(); af.delete(); skf.delete();

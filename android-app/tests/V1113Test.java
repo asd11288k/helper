@@ -1,12 +1,12 @@
 // v1.1.15 新契约：删除单条消息 / 会话编号唯一 / 新 prefs 开关 / 提示词证据核对 / 沙箱绝对地址 / 国内搜索源
 // 编译：javac -cp libs/json.jar:/tmp/v1112tests -d /tmp/v1112tests tests/V1113Test.java
 // 运行：java -cp libs/json.jar:/tmp/v1112tests V1113Test
-import com.doubao.app.Channels;
-import com.doubao.app.LocalGateway;
-import com.doubao.app.Settings;
-import com.doubao.app.Skills;
-import com.doubao.app.Store;
-import com.doubao.app.Tools;
+import com.helper.app.Channels;
+import com.helper.app.LocalGateway;
+import com.helper.app.Settings;
+import com.helper.app.Skills;
+import com.helper.app.Store;
+import com.helper.app.Tools;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -52,7 +52,7 @@ public class V1113Test {
         ok("提示词禁止无证据说完成", guide.contains("不要只说") || guide.contains("不许"));
         ok("提示词不撑爆上下文（长度受控）", guide.length() < 4000);
         String manual = LocalGateway.manual();
-        ok("操作手册写明沙箱绝对地址", manual.contains("/data/data/com.doubao.app/files/toolfiles")
+        ok("操作手册写明沙箱绝对地址", manual.contains("/data/data/com.helper.app/files/toolfiles")
                 || manual.contains("getFilesDir()/toolfiles"));
         ok("操作手册说明文件工具范围", manual.contains("toolfiles"));
 
@@ -135,7 +135,7 @@ public class V1113Test {
                 && p1.contains("\"showTiming\":true") && p1.contains("\"showTokens\":true"));
         ok("改主题不冲掉三开关",
                 body(http(v + "/prefs", "PUT", "{\"theme\":\"dark\"}")).contains("\"showTokens\":true"));
-        ok("/about 版本 1.1.22", body(http(v + "/about", "GET", null)).contains("1.1.22"));
+        ok("/about 版本 1.1.23", body(http(v + "/about", "GET", null)).contains("1.1.23"));
         // 需求⑨：编辑渠道回显密钥（列表接口仍不回显）
         String chAdd = body(http(v + "/channels", "POST",
                 "{\"name\":\"带密钥\",\"baseUrl\":\"http://127.0.0.1:1/v1\",\"apiKey\":\"sk-real-key\",\"model\":\"m1\"}"));

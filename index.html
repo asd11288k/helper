@@ -535,9 +535,9 @@
         <div class="card">
           <h4>小助手</h4>
           <div class="tip">简单对话助手</div>
-          <div class="about-row"><span class="k">项目地址</span><span class="v" id="aboutUrl">https://github.com/asd11288k/xiao-zhushou</span></div>
+          <div class="about-row"><span class="k">项目地址</span><span class="v" id="aboutUrl">https://github.com/asd11288k/helper</span></div>
           <div class="about-row"><span class="k">作者</span><span class="v" id="aboutAuthor">子兮</span></div>
-          <div class="about-row"><span class="k">版本号</span><span class="v" id="aboutVersion">1.1.22</span></div>
+          <div class="about-row"><span class="k">版本号</span><span class="v" id="aboutVersion">1.1.23</span></div>
         </div>
       </div>
     </div>
@@ -2099,9 +2099,9 @@ async function loadAbout() {
     const r = await fetch(API + '/about', { method: 'GET' });
     if (!r.ok) return;
     const d = await r.json();
-    $('aboutUrl').textContent = d.projectUrl || 'https://github.com/asd11288k/xiao-zhushou';
+    $('aboutUrl').textContent = d.projectUrl || 'https://github.com/asd11288k/helper';
     $('aboutAuthor').textContent = d.author || '子兮';
-    $('aboutVersion').textContent = d.version || '1.1.22';
+    $('aboutVersion').textContent = d.version || '1.1.23';
   } catch (e) { /* 保留 HTML 里的默认值 */ }
 }
 

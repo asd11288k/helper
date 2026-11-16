@@ -1,14 +1,14 @@
 // v1.1.12 新契约：工具闭环 AgentLoop / now / 多会话路由 / prefs 双开关 / Anthropic 通用 / 操作手册
 // 编译：javac -cp libs/json.jar:/tmp/v1112tests -d /tmp/v1112tests tests/V1112Test.java
 // 运行：java -cp libs/json.jar:/tmp/v1112tests V1112Test
-import com.doubao.app.AgentLoop;
-import com.doubao.app.Channels;
-import com.doubao.app.LocalGateway;
-import com.doubao.app.Providers;
-import com.doubao.app.Settings;
-import com.doubao.app.Skills;
-import com.doubao.app.Store;
-import com.doubao.app.Tools;
+import com.helper.app.AgentLoop;
+import com.helper.app.Channels;
+import com.helper.app.LocalGateway;
+import com.helper.app.Providers;
+import com.helper.app.Settings;
+import com.helper.app.Skills;
+import com.helper.app.Store;
+import com.helper.app.Tools;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -237,8 +237,8 @@ public class V1112Test {
         ok("/clear 带 sessionId 正常",
                 http(v + "/agents/" + aid + "/clear", "POST", "{\"sessionId\":\"" + s1 + "\"}")
                         .startsWith("200|"));
-        ok("/about 版本 1.1.22",
-                body(http(v + "/about", "GET", null)).contains("\"version\":\"1.1.22\""));
+        ok("/about 版本 1.1.23",
+                body(http(v + "/about", "GET", null)).contains("\"version\":\"1.1.23\""));
 
         gw.stop();
         cf.delete(); sf.delete(); af.delete(); skf.delete(); prefsFile.delete();
