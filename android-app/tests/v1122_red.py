@@ -6,7 +6,8 @@
 # #4 技能注入加【用户已指定技能】引导包装，杜绝「未收到技能提示词/找不到技能」
 # #5 用户设定显式开/关态注入：关闭时不暴露内容、要求不猜、如实说不知道
 import re, sys
-ROOT = '/data/user/0/com.ai.assistance.operit/files/workspace/doubao/'
+import os
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/'
 HTML = open(ROOT + 'index.html', encoding='utf-8').read()
 MAN = open(ROOT + 'android-app/AndroidManifest.xml', encoding='utf-8').read()
 GW = open(ROOT + 'android-app/src/com/helper/app/LocalGateway.java', encoding='utf-8').read()
