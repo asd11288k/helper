@@ -14,7 +14,7 @@ WebView 前端 + 进程内本地网关，聊天记录、智能体、渠道密钥
 
 ## 下载
 
-`release/` 目录里是最新 APK。允许「安装未知来源应用」后直接装，Android 5.0 及以上。
+Releases 下载区有最新 APK。允许「安装未知来源应用」后直接装，Android 5.0 及以上。
 
 装好打开就能用内置模型聊天
 
@@ -28,7 +28,7 @@ apt install -y --no-install-recommends \
 # JDK 17 提供 javac / keytool
 
 cd android-app
-bash build.sh        # → dist/doubao.apk
+bash build.sh        # → dist/helper.apk
 ```
 
 首次构建会自动生成一个自签 `keystore.jks`（仅供本地分发）。
