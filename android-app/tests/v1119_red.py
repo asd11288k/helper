@@ -3,7 +3,8 @@
 # 保留覆盖式（列表再多也不会无限往下、表单内部滚动），但顶栏(←返回/技能)不被遮挡。
 import re, sys
 
-ROOT = '/data/user/0/com.ai.assistance.operit/files/workspace/doubao/'
+import os
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/'
 HTML = open(ROOT + 'index.html', encoding='utf-8').read()
 MAN = open(ROOT + 'android-app/AndroidManifest.xml', encoding='utf-8').read()
 
