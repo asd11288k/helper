@@ -63,7 +63,7 @@ ok('点列表项插入激活 token(@\\u200b名\\u200b)',
    "const token = '@\\u200b' + x.name + '\\u200b';" in HTML)
 ok('send 提取 activeSkills 并随 body 发送',
    'const activeSkills = []' in HTML and 'skills: activeSkills' in HTML)
-ok('复制/编辑剥离零宽标记', 'raw.replace(/' + '\' + 'u200b/g' in HTML or "replace(/\\u200b/g" in HTML)
+ok('复制/编辑剥离零宽标记', 'raw.replace(/' + '\\' + 'u200b/g' in HTML or "replace(/\\u200b/g" in HTML)
 
 print('[4] #4 两处注释修改')
 ok('技能页注释去掉分号后半句',
