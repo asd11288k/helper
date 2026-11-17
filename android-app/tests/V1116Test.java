@@ -181,8 +181,8 @@ public class V1116Test {
         String lr = http(v + "/channels/" + lcid + "/models", "GET", null);
         ok("不可达渠道不再假装成功返回固定清单", lr.startsWith("4"));
 
-        System.out.println("[7] 版本 /about = 1.1.23");
-        ok("/about 版本 1.1.23", body(http(v + "/about", "GET", null)).contains("1.1.23"));
+        System.out.println("[7] 版本 /about = 1.1.27");
+        ok("/about 版本 1.1.27", body(http(v + "/about", "GET", null)).contains("1.1.38"));
 
         gw.stop();
         cf.delete(); sf.delete(); af.delete(); skf.delete();
