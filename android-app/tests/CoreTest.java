@@ -93,13 +93,14 @@ public class CoreTest {
         File tmp = File.createTempFile("helper_store_", ".json");
         tmp.delete();
         Store st = new Store(new File(tmp.getParentFile(), "agents_" + System.nanoTime() + ".json"));
-        eq("初始为空", 0, st.agents().length());
+        // v1.1.24 校准：Store 构造时文件为空会内置默认智能体「小助手」（有意行为）
+        eq("初始含内置默认智能体", 1, st.agents().length());
         JSONObject a = st.create("翻译官", "只做翻译");
         ok("create 返回 id", a.getString("id").length() > 0);
         eq("create 名称", "翻译官", a.getString("name"));
         eq("create 设定", "只做翻译", a.getString("setting"));
         eq("create 消息为空", 0, a.getJSONArray("messages").length());
-        eq("列表长度=1", 1, st.agents().length());
+        eq("列表长度=默认+新建", 2, st.agents().length());
 
         JSONObject found = st.find(a.getString("id"));
         ok("find 命中", found != null && "翻译官".equals(found.getString("name")));
@@ -116,12 +117,13 @@ public class CoreTest {
           .put(new JSONObject().put("role", "assistant").put("content", "你好"));
         st.save();
         Store st2 = new Store(st.file());
-        eq("重载后列表长度", 1, st2.agents().length());
-        eq("重载后名称", "译者", st2.agents().getJSONObject(0).getString("name"));
-        eq("重载后消息数", 2, st2.agents().getJSONObject(0).getJSONArray("messages").length());
+        eq("重载后列表长度", 2, st2.agents().length());
+        JSONObject r2 = st2.find(a.getString("id"));
+        eq("重载后名称", "译者", r2.getString("name"));
+        eq("重载后消息数", 2, r2.getJSONArray("messages").length());
 
         st.delete(a.getString("id"));
-        eq("delete 后为空", 0, st.agents().length());
+        eq("delete 后只剩内置默认", 1, st.agents().length());
         st.file().delete();
 
         System.out.println("\n" + (fail == 0 ? "全部通过 ✅ " + pass + " 项" : fail + " 项失败 ❌"));
