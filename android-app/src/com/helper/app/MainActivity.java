@@ -44,18 +44,30 @@ public class MainActivity extends Activity {
     private static final int REQ_FILE = 1002;
     private String pendingFileCallback = "";   // JS 回调函数名
 
-    /** 系统栏配色：浅色白底深图标，深色深底浅图标。窗口铺满后由 App 自己绘制这两条区域。 */
-    private void applyTheme(final String theme) {
+    /** 系统栏配色：v1.1.32 #1 改为跟随顶栏填充色（不再硬编码白/灰）。
+     *  fillColor 为空时回落旧逻辑：深色 #1f2329、浅色白。图标明暗按填充色亮度自动反转。 */
+    private void applyTheme(final String theme) { applyTheme(theme, null); }
+    private void applyTheme(final String theme, final String fillColor) {
         if (Build.VERSION.SDK_INT < 21) return;
         final boolean dark = "dark".equals(theme);
         runOnUiThread(new Runnable() {
             public void run() {
                 Window w = getWindow();
-                int bar = dark ? Color.parseColor("#1f2329") : Color.WHITE;
+                int bar;
+                try { bar = (fillColor != null && !fillColor.isEmpty())
+                        ? Color.parseColor(fillColor)
+                        : (dark ? Color.parseColor("#1f2329") : Color.WHITE); }
+                catch (Exception e) { bar = dark ? Color.parseColor("#1f2329") : Color.WHITE; }
                 w.setStatusBarColor(bar);
                 w.setNavigationBarColor(bar);
+                // 状态栏图标用深色当且仅当填充足够亮（浅色主题的亮黄/亮绿等）
+                boolean lightIcons = dark; // 深色黑底 → 浅色图标
+                if (fillColor != null && !fillColor.isEmpty()) {
+                    double lum = (0.299 * Color.red(bar) + 0.587 * Color.green(bar) + 0.114 * Color.blue(bar));
+                    lightIcons = lum < 150;  // 暗底用浅色图标，亮底用深色图标
+                }
                 int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
-                if (!dark) {
+                if (!lightIcons) {
                     if (Build.VERSION.SDK_INT >= 23) flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
                     if (Build.VERSION.SDK_INT >= 26) flags |= 0x10; // SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
                 }
@@ -68,6 +80,8 @@ public class MainActivity extends Activity {
     private final class ThemeBridge {
         @JavascriptInterface
         public void setBars(final String theme) { applyTheme(theme); }
+        @JavascriptInterface
+        public void setBars(final String theme, final String fillColor) { applyTheme(theme, fillColor); }
 
         /** 聊天页按返回键时由前端状态机调用；原生弹二次确认，确认才真正退出。 */
         @JavascriptInterface
