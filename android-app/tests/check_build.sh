@@ -14,8 +14,8 @@ chk "前端含 /channels 探测" "grep -q \"fetch(API + '/channels'\" ../index.h
 chk "MainActivity 不调用旧写死上游的 Core.chat" "! grep -q 'Core.chat' src/com/helper/app/MainActivity.java"
 # --- v1.0.0 既有需求 ---
 chk "App 名为小助手" "grep -q '<string name=\"app_name\">小助手</string>' res/values/strings.xml"
-chk "版本号 1.1.38" "grep -q 'android:versionName=\"1.1.38\"' AndroidManifest.xml"
-chk "versionCode 递增到 30" "grep -q 'android:versionCode=\"31\"' AndroidManifest.xml"
+chk "版本号 1.1.45" "grep -q 'android:versionName=\"1.1.45\"' AndroidManifest.xml"
+chk "versionCode 递增到 30" "grep -q 'android:versionCode=\"38\"' AndroidManifest.xml"
 chk "④ 启动图标为附件原图重生成" "grep -q 'ic_launcher' AndroidManifest.xml && ls res/mipmap-xxxhdpi/ic_launcher.png >/dev/null 2>&1"
 chk "⑫ 全局提示词注入上游" "grep -q 'globalGuide' src/com/helper/app/LocalGateway.java"
 chk "⑫ 提供商注册表" "grep -q 'Deepseek' src/com/helper/app/Providers.java && grep -q 'anthropic' src/com/helper/app/Providers.java"
@@ -144,7 +144,7 @@ chk "⑱ 插件弹列表不跳页" "grep -q 'kind === .插件. ? .插件.' ../in
 chk "⑲ 加号列表空白收起" "grep -q 'plusOutsideListener' ../index.html"
 chk "⑳ 操作手册含索引/工程师技能" "grep -q '工程师技能调用信息' src/com/helper/app/LocalGateway.java && grep -q '软件使用说明' src/com/helper/app/LocalGateway.java && grep -q '底层代码实现' src/com/helper/app/LocalGateway.java"
 chk "⑳ 绝对禁止瞎编红线" "grep -q '绝对禁止瞎编' src/com/helper/app/LocalGateway.java"
-chk "版本 30 / 1.1.38" "grep -q 'android:versionCode=\"31\"' AndroidManifest.xml && grep -q 'android:versionName=\"1.1.38\"' AndroidManifest.xml"
+chk "版本 30 / 1.1.45" "grep -q 'android:versionCode=\"38\"' AndroidManifest.xml && grep -q 'android:versionName=\"1.1.45\"' AndroidManifest.xml"
 
 # --- v1.1.15 本轮新增契约（静态） ---
 chk "① 气泡右上角 ✕ 已删（删除统一走长按）" "! grep -q \"del.className = 'msg-del'\" ../index.html"
@@ -225,7 +225,7 @@ chk "#4 plusBtn 默认 line 灰框 + .on 展开亮蓝" "grep -q '#plusBtn { .*bo
 # #5 重开渠道恢复上次全部已保存模型的高亮
 chk "#5 openChannelForm 从 c.models 恢复勾选" "grep -q 'v1.1.21 #5：重新进入渠道表单时' ../index.html && grep -q 'Array.isArray(c.models)' ../index.html"
 # 版本对齐
-chk "版本 30 / 1.1.38 (aboutVersion)" "grep -q 'id=\"aboutVersion\">1.1.38<' ../index.html"
+chk "版本 30 / 1.1.45 (aboutVersion)" "grep -q 'id=\"aboutVersion\">1.1.45<' ../index.html"
 
 # --- v1.1.22 本轮契约（5 项需求） ---
 # #1 输入框错位（见上方 v1.1.22 块，textarea/mirror 无边框、边框归 wrap）
