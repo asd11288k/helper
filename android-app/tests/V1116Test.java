@@ -182,7 +182,7 @@ public class V1116Test {
         ok("不可达渠道不再假装成功返回固定清单", lr.startsWith("4"));
 
         System.out.println("[7] 版本 /about = 1.1.27");
-        ok("/about 版本 1.1.27", body(http(v + "/about", "GET", null)).contains("1.1.38"));
+        ok("/about 版本 1.1.27", body(http(v + "/about", "GET", null)).contains("1.1.45"));
 
         gw.stop();
         cf.delete(); sf.delete(); af.delete(); skf.delete();
