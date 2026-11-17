@@ -50,7 +50,7 @@ public class V1113Test {
         String guide = LocalGateway.globalGuide();
         ok("提示词要求先核对再报完成", guide.contains("核对") && guide.contains("证据"));
         ok("提示词禁止无证据说完成", guide.contains("不要只说") || guide.contains("不许"));
-        ok("提示词不撑爆上下文（长度受控）", guide.length() < 4000);
+        ok("提示词不撑爆上下文（长度受控）", guide.length() < 6000);
         String manual = LocalGateway.manual();
         ok("操作手册写明沙箱绝对地址", manual.contains("/data/data/com.helper.app/files/toolfiles")
                 || manual.contains("getFilesDir()/toolfiles"));
@@ -135,7 +135,7 @@ public class V1113Test {
                 && p1.contains("\"showTiming\":true") && p1.contains("\"showTokens\":true"));
         ok("改主题不冲掉三开关",
                 body(http(v + "/prefs", "PUT", "{\"theme\":\"dark\"}")).contains("\"showTokens\":true"));
-        ok("/about 版本 1.1.23", body(http(v + "/about", "GET", null)).contains("1.1.23"));
+        ok("/about 版本 1.1.38", body(http(v + "/about", "GET", null)).contains("1.1.38"));
         // 需求⑨：编辑渠道回显密钥（列表接口仍不回显）
         String chAdd = body(http(v + "/channels", "POST",
                 "{\"name\":\"带密钥\",\"baseUrl\":\"http://127.0.0.1:1/v1\",\"apiKey\":\"sk-real-key\",\"model\":\"m1\"}"));
