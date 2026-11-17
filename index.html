@@ -12,10 +12,18 @@
     --panel2: #eef1f6;
     --user: #3b82f6;
     --usertext: #ffffff;
+    --on-fill: #ffffff;        /* v1.1.32 #2：填充背景上的文字色，亮填充时由JS改黑，保证可读 */
+    --on-fill-soft: rgba(255,255,255,.82);   /* v1.1.32 #2：顶栏副标题等弱化文字 */
+    --header-fg: #ffffff;            /* v1.1.36 #1：顶栏字体色，仅「柠檬黄」浅底时由JS改黑，其余恒白 */
+    --header-fg-soft: rgba(255,255,255,.82);   /* v1.1.36 #1：顶栏副标题色 */
+    --user-text: #ffffff;          /* v1.1.37 #1：用户气泡字体色，独立于--on-fill，黄/蔚蓝/薄荷绿强制白 */
     --ai: #ffffff;
     --text: #1f2329;
     --sub: #6b7280;
     --accent: #3b82f6;
+    --accent-fill: #3b82f6;   /* v1.1.31 #1：填充专用色（浅色=主题色，深色由 body.dark→黑） */
+    --user-fill: #3b82f6;     /* v1.1.31 #1：用户气泡专用色（浅色=主题色，深色→AI同款 #1f2329） */
+    --accent-glow: rgba(59,130,246,.18);   /* v1.1.30 #1：唯一光晕来源，收编原写死的 rgba(59,130,246) */
     --line: #e5e7eb;
     --danger: #ef4444;
   }
@@ -26,7 +34,11 @@
     --ai: #1f2329;
     --text: #e8eaed;
     --sub: #9aa0a6;
-    --accent: #60a5fa;
+    --accent: #2563eb;   /* v1.1.30 #1：深色默认蓝由浅亮 #60a5fa 改深，顶栏/用户气泡不再刺眼 */
+    --user: #2563eb;      /* v1.1.30 #1：深色此前未覆盖 --user（仍 #3b82f6），现与深色 --accent 同深 */
+    --accent-glow: rgba(37,99,235,.30);
+    --accent-fill: #000000;   /* v1.1.31 #1：深色填充(顶栏/按钮/选中态)→黑，黑底配白字仍可读 */
+    --user-fill: #1f2329;     /* v1.1.31 #1：深色用户气泡→AI同款 #1f2329(不再蓝) */
     --line: #343a42;
   }
   html, body { height: 100%; }
@@ -35,25 +47,25 @@
     background: var(--bg); color: var(--text);
     display: flex; flex-direction: column; height: 100%;
   }
-  header {
-    padding: 12px 16px; background: var(--panel);
+  header {   /* v1.1.35 #1：顶栏文字/控件统一白色（不再随主题色亮度自适应） */
+    padding: 12px 16px; background: var(--accent-fill); color: var(--header-fg);
     display: flex; align-items: center; gap: 12px;
     border-bottom: 1px solid var(--line); flex-shrink: 0;
   }
   .header-left { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .header-title { flex: 1; min-width: 0; text-align: center; }
   header .title { font-size: 16px; font-weight: 600; }
-  .header-title .sub { font-size: 12px; color: var(--sub); margin-top: 2px;
+  .header-title .sub { font-size: 12px; color: var(--header-fg-soft); margin-top: 2px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #status { font-size: 12px; color: var(--sub); flex-shrink: 0; }
-  #status.err { color: var(--danger); }
-  #status.ok { color: #16a34a; }
+  #status { font-size: 12px; color: var(--header-fg); flex-shrink: 0; }
+  #status.err { color: #ffd7d7; }
+  #status.ok { color: #d3f8dd; font-weight: 700; text-shadow: 0 0 3px rgba(0,0,0,.55); }   /* v1.1.33 #2：加粗+描边增强，亮主题色底也清晰 */
   .header-left #toggleBtn, .header-left #newAgentBtn {
-    border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    border: 1px solid var(--fill-border); background: transparent; color: var(--header-fg);   /* v1.1.38 #1：边框随主题(白/柠檬黄黑) */
     border-radius: 8px; padding: 6px 9px; font-size: 13px; cursor: pointer;
   }
-  .header-left #newAgentBtn { color: var(--accent); border-color: var(--accent); background: transparent; }
-  #settingsBtn { display: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+  .header-left #newAgentBtn { color: var(--header-fg); border-color: var(--fill-border); background: transparent; }
+  #settingsBtn { display: none; border: 1px solid var(--fill-border); background: transparent; color: var(--header-fg);
     border-radius: 8px; padding: 6px 9px; font-size: 13px; cursor: pointer; flex-shrink: 0; }
   #main { flex: 1; display: flex; overflow: hidden; min-width: 0; }
   #sidebar {
@@ -95,7 +107,7 @@
   #msgMenu .mm-del { color: var(--text) !important; }
   #chat { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; min-width: 0; }
   .msg { max-width: 86%; min-width: 0; padding: 11px 14px; border-radius: 14px; line-height: 1.6; font-size: 15px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
-  .msg.user { align-self: flex-end; background: var(--user); color: var(--usertext); border-bottom-right-radius: 4px; }
+  .msg.user { align-self: flex-end; background: var(--user-fill); color: var(--user-text); border-bottom-right-radius: 4px; }   /* v1.1.37 #1：字体独立变量，黄/蔚蓝/薄荷绿强制白 */
   .msg.ai { align-self: flex-start; background: var(--ai); color: var(--text); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
   .msg.err { align-self: center; background: #fef2f2; color: var(--danger); font-size: 13px; max-width: 92%; border: 1px solid #fecaca; }
   body.dark .msg.err { background: #3b1f1f; border-color: #7f1d1d; }
@@ -105,16 +117,22 @@
   .typing span:nth-child(3) { animation-delay: .4s }
   @keyframes blink { 0%, 100% { opacity: .2 } 50% { opacity: 1 } }
   #bar { flex-shrink: 0; background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); position: relative; }
-  #row { display: flex; gap: 8px; align-items: flex-end; }
+  #row { display: flex; gap: 8px; align-items: flex-end;
+    /* v1.1.26 #2 根治：四个控件（＋/渠道/输入框/发送）共用同一个高度变量，
+       物理上不可能再出现高度不一致；输入内容增高时四个一起长。 */
+    --ctlH: 44px; }
   /* v1.1.20 #3：输入框镜像高亮层。wrap 占据原 textarea 的 flex 位，
      mirror 与 textarea 完全同盒模型叠放；textarea 文字透明、只留光标。 */
-  #inputWrap { flex: 1; min-width: 0; position: relative;
+  /* v1.1.26 #2 真因修复：你看到的「框子」是 #inputWrap，此前它没有 height，
+     由内容撑高 = textarea 44 + 自身上下边框 2 = 46px，比三个按钮恒高 2px，
+     所以改 textarea 高度永远看不出变化。高度必须钉在这个真正的框子上。 */
+  #inputWrap { flex: 1; min-width: 0; position: relative; height: var(--ctlH);
     background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; }   /* v1.1.22 #1：唯一可见边框归容器，聚焦整体变蓝不错位 */
   #inputWrap:focus-within { border-color: var(--accent); }
   #input, #inputMirror {
-    box-sizing: border-box; width: 100%; resize: none;
-    border-radius: 12px; padding: 11px 13px; font-size: 15px;
-    font-family: inherit; line-height: 1.5; max-height: 120px; margin: 0;
+    box-sizing: border-box; width: 100%; resize: none; height: 100%; min-height: 0;
+    border-radius: 12px; padding: 10px 13px; font-size: 15px;   /* v1.1.26 #2：填满框子内容区，高度由 #inputWrap 统一决定 */
+    font-family: inherit; line-height: 24px; max-height: 68px; margin: 0;   /* v1.1.36 #2：最多撑到 2 行(10+24*2+10=68) */
     white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word;
   }
   /* v1.1.22 #1：可见边框统一交给 #inputWrap 容器；mirror 与 textarea 均无边框，
@@ -136,7 +154,7 @@
     -webkit-text-fill-color: var(--sub); }
   /* ①④ 渠道按钮收窄为只显示渠道名首字符，省下的宽度归输入框 */
   #channelTrigger {
-    width: 40px; flex-shrink: 0; height: 42px; border: 1px solid var(--line);
+    width: 40px; flex-shrink: 0; height: var(--ctlH); border: 1px solid var(--line);
     background: var(--panel2); color: var(--text); border-radius: 12px;
     padding: 0; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
   }
@@ -149,17 +167,20 @@
   #channelPicker .pk-ch { display: block; width: 100%; text-align: left; border: none;
     background: var(--panel2); color: var(--text); border-radius: 8px; padding: 8px 10px;
     font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 4px; }
-  #channelPicker .pk-ch.on { background: var(--accent); color: #fff; }
+  #channelPicker .pk-ch.on { background: var(--accent-fill); color: var(--on-fill); }
   #channelPicker .pk-model { display: block; width: 100%; text-align: left; border: none;
     background: transparent; color: var(--text); border-radius: 8px; padding: 7px 18px;
     font-size: 12px; cursor: pointer; font-family: inherit;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #channelPicker .pk-model.on { color: var(--accent); font-weight: 600; }
-  #modelCandidates button.on { background: var(--accent); color: #fff; }
-  #skillBtn, #userBtn { margin: 6px; border: 1px solid var(--line); background: var(--panel);
+  #modelCandidates button.on { background: var(--accent-fill); border-color: var(--fill-border); color: var(--on-fill); }   /* v1.1.38 #1：选中候选模型边框统一 */
+  /* v1.1.24 #3：侧栏四入口统一 margin，严格等距（原 user/skill 上下各 6 叠加成 12px 不等距） */
+  #userBtn, #skillBtn, #toolBtn, #pluginBtn { margin: 6px 6px 0; border: 1px solid var(--line); background: var(--panel);
     color: var(--text); border-radius: 10px; padding: 9px 10px; font-size: 13px;
     cursor: pointer; flex-shrink: 0; font-family: inherit; text-align: left; }
-  #send { border: none; background: var(--accent); color: #fff; border-radius: 12px; padding: 11px 14px; font-size: 15px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+  /* v1.1.24 #3：最后一个按钮与屏幕底边留 6px，避免贴边 */
+  #sidebar { padding-bottom: 6px; }
+  #send { border: none; background: var(--accent-fill); color: var(--on-fill); border-radius: 12px; height: var(--ctlH); padding: 0 14px; font-size: 15px; font-weight: 600; cursor: pointer; flex-shrink: 0; }   /* v1.1.26 #2：与其余三控件同源 --ctlH */
   #send:disabled { opacity: .45; }
   #barHint { font-size: 11px; color: var(--sub); margin-top: 6px; text-align: right; }
   #modal { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); display: none; align-items: center; justify-content: center; z-index: 50; }
@@ -175,7 +196,7 @@
   .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
   .frow { display: flex; gap: 8px; justify-content: flex-end; }
   .frow button { border: none; border-radius: 10px; padding: 9px 14px; font-size: 14px; cursor: pointer; }
-  #fOk { background: var(--accent); color: #fff; }
+  #fOk { background: var(--accent-fill); color: var(--on-fill); }
   #fCancel { background: var(--panel2); color: var(--text); }
 
   /* 设置：独立整页，三分区 */
@@ -189,7 +210,7 @@
     border-top: 1px solid var(--line); border-bottom: none; flex-shrink: 0; margin-top: auto; }
   #settingsTabs button { flex: 1; border: 1px solid var(--line); background: var(--panel2);
     color: var(--sub); border-radius: 10px; padding: 9px 4px; font-size: 13px; cursor: pointer; font-family: inherit; }
-  #settingsTabs button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  #settingsTabs button.on { background: var(--accent-fill); border-color: var(--fill-border); color: var(--on-fill); font-weight: 600; }   /* v1.1.38 #1：主题色底Tab字体+边框统一 */
   #settingsBody { flex: 1; overflow-y: auto; padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); }
   .sec { display: none; }
   .sec.on { display: block; }
@@ -210,7 +231,7 @@
     border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; flex-shrink: 0; }
   .ch-item button.danger { color: var(--danger); }
   .btn { border: none; border-radius: 10px; padding: 10px 14px; font-size: 14px; cursor: pointer; font-family: inherit; }
-  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.primary { background: var(--accent-fill); color: var(--on-fill); }
   .btn.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
   .btn.small { padding: 7px 10px; font-size: 12px; }
   /* v1.1.18 #2：外观完全沿用 1.1.16 原样式（用户喜欢的全屏卡片浮层）。
@@ -230,20 +251,24 @@
   #themeChoices button { flex: 1; padding: 18px 8px; border-radius: 14px; font-size: 14px;
     border: 2px solid var(--line); background: var(--panel2); color: var(--text); cursor: pointer; font-family: inherit; }
   #themeChoices button.on { border-color: var(--accent); background: var(--panel); color: var(--accent); font-weight: 600; }
+  /* v1.1.30 #1：主题色选择器，色块背景由 JS 按当前深浅模式逐色填充 */
+  #accentChoices { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+  .accent-dot { width: 44px; height: 44px; border-radius: 12px; border: 2px solid var(--line); cursor: pointer; padding: 0; }
+  .accent-dot.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--accent); }
   .about-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0;
     border-top: 1px solid var(--line); font-size: 14px; }
   .about-row:first-of-type { border-top: none; }
   .about-row .k { color: var(--sub); flex-shrink: 0; }
   .about-row .v { text-align: right; word-break: break-all; }
   /* ⑤ 技能管理页：与设置页同一套卡片/按钮/表单样式 */
-  #userPage, #skillsPage { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: none; flex-direction: column; }
-  #userBar, #skillsBar { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  #userPage, #skillsPage, #promptOverridePage { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: none; flex-direction: column; }
+  #userBar, #skillsBar, #promptOverrideBar { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
     background: var(--panel); border-bottom: 1px solid var(--line); flex-shrink: 0; }
-  #userBar .st, #skillsBar .st { font-size: 16px; font-weight: 600; flex: 1; }
-  #userBackBtn, #skillsBackBtn { border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+  #userBar .st, #skillsBar .st, #promptOverrideBar .st { font-size: 16px; font-weight: 600; flex: 1; }
+  #userBackBtn, #skillsBackBtn, #poBackBtn { border: 1px solid var(--line); background: var(--panel2); color: var(--text);
     border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
-  #userBody, #skillsBody { flex: 1; overflow-y: auto; padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); }
-  #userSetting { width: 100%; min-height: 160px; border: 1px solid var(--line); background: var(--panel2);
+  #userBody, #skillsBody, #promptOverrideBody { flex: 1; overflow-y: auto; padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); }
+  #userSetting, #poGuide, #poManual { width: 100%; min-height: 160px; border: 1px solid var(--line); background: var(--panel2);
     color: var(--text); border-radius: 10px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; }
   .sk-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
   .sk-item:first-child { border-top: none; }
@@ -263,11 +288,28 @@
   #skForm .field { margin-bottom: 10px; }
   #skForm .field label { width: 62px; padding-top: 11px; font-size: 13px; }
   #skFormTip, #agFormTip { font-size: 12px; color: var(--sub); line-height: 1.6; margin-top: 8px; }
-  /* 需求③⑤：侧边栏三入口 + 工具/插件页（复用技能页样式） */
-  #toolBtn, #pluginBtn { margin: 6px; margin-top: 0; border: 1px solid var(--line); background: var(--panel);
-    color: var(--text); border-radius: 10px; padding: 9px 10px; font-size: 13px;
-    cursor: pointer; flex-shrink: 0; font-family: inherit; text-align: left; }
+  /* 需求③⑤：侧边栏三入口 + 工具/插件页（复用技能页样式）—— v1.1.24 #3：四按钮 margin 已并入上方统一规则 */
   #toolsPage, #pluginsPage { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: none; flex-direction: column; }
+  /* v1.1.24 #1：提示词查看器页（复用工具页版式） */
+  #promptPage { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: none; flex-direction: column; }
+  #promptBar { display: flex; align-items: center; gap: 8px; padding: 12px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  #promptBar .st { font-size: 16px; font-weight: 600; flex: 1; }
+  #promptClearBtn { border: 1px solid var(--line); background: var(--panel2); color: var(--sub);
+    border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  #promptBackBtn { border: 1px solid var(--line); background: var(--panel2); color: var(--text);   /* v1.1.27 #3：与设置页返回按钮同款背景，不再裸 button */
+    border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+  #promptBody { flex: 1; overflow-y: auto; padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); }
+  #promptBody pre { white-space: pre-wrap; word-break: break-all; background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px; font-size: 12px;
+    line-height: 1.55; max-height: 46vh; overflow-y: auto; margin: 6px 0; }
+  .pr-item { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+    margin-bottom: 10px; background: var(--panel); }
+  .pr-item .pr-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; cursor: pointer; }
+  .pr-item .pr-sum { font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; max-width: 62%; }
+  .pr-detail { display: none; }
+  .pr-item.open > .pr-detail { display: block; }   /* v1.1.27 #2：改直接子选择器，避免外层展开时强制点亮内部所有子条（导致历史子条默认展开且收不回） */
   #toolsBar, #pluginsBar { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
     background: var(--panel); border-bottom: 1px solid var(--line); flex-shrink: 0; }
   #toolsBar .st, #pluginsBar .st { font-size: 16px; font-weight: 600; flex: 1; }
@@ -276,7 +318,7 @@
   #toolsBody, #pluginsBody { flex: 1; overflow-y: auto; padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); }
   #toolsEmpty, #pluginsEmpty { font-size: 13px; color: var(--sub); padding: 8px 2px; }
   /* 需求⑩：输入框左侧 + 按钮与浮层 */
-  #plusBtn { width: 40px; flex-shrink: 0; height: 42px; border: 1px solid var(--line);   /* v1.1.22 #2：默认灰框，与渠道按钮同款，仅展开列表时 .on 亮蓝 */
+  #plusBtn { width: 40px; flex-shrink: 0; height: var(--ctlH); border: 1px solid var(--line);   /* v1.1.26 #2：与其余三控件同源 --ctlH */   /* v1.1.22 #2：默认灰框，与渠道按钮同款，仅展开列表时 .on 亮蓝 */
     background: var(--panel2); color: var(--text); border-radius: 12px;
     padding: 0; font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer; }
   #plusBtn.on { border-color: var(--accent); color: var(--accent); }
@@ -324,7 +366,7 @@
      background: var(--panel2); position: relative; cursor: pointer; flex-shrink: 0; }
    .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
      border-radius: 50%; background: var(--sub); transition: left .18s ease; }
-   .switch.on { background: var(--accent); border-color: var(--accent); }
+   .switch.on { background: var(--accent-fill); border-color: var(--fill-border); }   /* v1.1.38 #1 */
    .switch.on::after { left: 22px; background: #fff; }
    .typing .secs { font-style: normal; color: var(--accent); font-variant-numeric: tabular-nums; }
   /* v1.1.15 #4：耗时标注移到消息外——气泡下方独立行，背景=聊天背景色 */
@@ -358,7 +400,7 @@
   #effortRow button { flex: 1; border: 1px solid var(--line); background: var(--panel2);
     color: var(--text); border-radius: 8px; padding: 6px 2px; font-size: 11px;
     cursor: pointer; font-family: inherit; }
-  #effortRow button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  #effortRow button.on { background: var(--accent-fill); border-color: var(--fill-border); color: var(--on-fill); font-weight: 600; }   /* v1.1.38 #1 */
   /* #10：长按消息菜单 + 编辑弹层 */
   #msgMenu { position: fixed; z-index: 90; display: none; min-width: 150px; background: var(--panel);
     border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(15,23,42,.22); padding: 5px; }
@@ -396,7 +438,7 @@
     -webkit-appearance: none; appearance: none; outline: none; }
   /* #2：选完提供商后不再有黄色焦点框，改与渠道名一致的蓝色高亮 */
   #chProvider:focus, #chProvider.picked { border-color: var(--accent); color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(59,130,246,.18); }
+    box-shadow: 0 0 0 2px var(--accent-glow); }   /* v1.1.30 #1：光晕改走变量，跟主题色一起换 */
   /* 需求⑧：渠道浮层里的渠道可折叠 */
   #channelPicker .pk-ch { position: relative; }
   #channelPicker .pk-ch .arrow { float: right; font-size: 11px; color: var(--sub); }
@@ -452,12 +494,14 @@
            <button id="send">发送</button>
          </div>
          <div id="channelPicker"></div>
-         <div id="plusMenu">
-           <button id="pmImage">🖼 图片</button>
-           <button id="pmFile">📄 文件</button>
-           <button id="pmSkill">✦ 技能</button>
-           <button id="pmTool">⚒ 工具</button>
-           <button id="pmPlugin">⬡ 插件</button>
+<div id="plusMenu">
+            <button id="pmImage">🖼 图片</button>
+            <button id="pmFile">📄 文件</button>
+            <button id="pmSkill">✦ 技能</button>
+            <button id="pmTool">⚒ 工具</button>
+            <button id="pmPlugin">⬡ 插件</button>
+            <button id="pmPrompt" style="display:none">⧉ 提示词查看器</button>
+            <button id="pmPromptHist" style="display:none">⧉ 提示词查看器（历史）</button>
          </div>
          <div id="atList"></div>
          <div id="barHint">＋ 附件 · @ 引用技能/工具 · 点首字母切换渠道模型</div>
@@ -513,6 +557,9 @@
             <button id="themeDarkBtn">☾ 深色</button>
           </div>
           <div id="themeHint"></div>
+          <div style="font-size:13px;font-weight:600;margin-top:14px">主题色</div>
+          <div class="tip">改变顶栏、按钮、选中态、边框与用户气泡等所有主题色；深色模式下自动使用更深的同色系，避免刺眼。</div>
+          <div id="accentChoices"></div>
           <div class="opt-row">
             <div><div style="font-size:14px;font-weight:600">假流式输出</div>
               <div class="tip">开启后模型回复会逐段显示。</div></div>
@@ -537,10 +584,33 @@
           <div class="tip">简单对话助手</div>
           <div class="about-row"><span class="k">项目地址</span><span class="v" id="aboutUrl">https://github.com/asd11288k/helper</span></div>
           <div class="about-row"><span class="k">作者</span><span class="v" id="aboutAuthor">子兮</span></div>
-          <div class="about-row"><span class="k">版本号</span><span class="v" id="aboutVersion">1.1.23</span></div>
-        </div>
-      </div>
-    </div>
+          <div class="about-row"><span class="k">版本号</span><span class="v" id="aboutVersion">1.1.38</span></div>
+          <!-- v1.1.24 #1：连点版本号 7 次解锁测试模式三开关（默认隐藏） -->
+          <div id="devSection" style="display:none">
+            <div class="opt-row">
+              <div><div style="font-size:14px;font-weight:600">测试模式</div>
+                <div class="tip">总开关。开启后可用以下功能，关闭时不显示。</div></div>
+              <div id="devModeSwitch" class="switch" role="switch" aria-label="测试模式"></div>
+            </div>
+            <div id="devRowPromptViewer" class="opt-row">
+              <div><div style="font-size:14px;font-weight:600">提示词查看器</div>
+                <div class="tip">加号菜单出现入口：预览当前将发送给 AI 的系统提示词。</div></div>
+              <div id="devPromptViewerSwitch" class="switch" role="switch" aria-label="提示词查看器"></div>
+            </div>
+            <div id="devRowPromptHistory" class="opt-row">
+              <div><div style="font-size:14px;font-weight:600">提示词查看器（历史）</div>
+                <div class="tip">开启后每轮对话留档（最近 20 轮），加号菜单出现历史入口。</div></div>
+              <div id="devPromptHistorySwitch" class="switch" role="switch" aria-label="提示词查看器历史"></div>
+            </div>
+            <div id="devRowPromptOverride" class="opt-row">
+              <div><div style="font-size:14px;font-weight:600">修改系统提示词</div>
+                <div class="tip">编辑全局指南与操作手册（仅测试模式生效，下次对话起注入）。</div></div>
+              <button id="devPromptOverrideBtn" class="btn ghost small">编辑</button>
+            </div>
+          </div>
+         </div>
+       </div>
+     </div>
     <div id="settingsTabs">
       <button id="tabBtnModels" class="on">模型设置</button>
       <button id="tabBtnPersonal">个性化</button>
@@ -569,6 +639,31 @@
         </div>
         <div id="userHint" class="tip" style="margin-top:8px"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- v1.1.27 #4：测试模式修改系统提示词（全局指南 / 操作手册），复用用户页版式 -->
+  <div id="promptOverridePage">
+    <div id="promptOverrideBar">
+      <button id="poBackBtn">← 返回</button>
+      <div class="st">修改系统提示词</div>
+    </div>
+    <div id="promptOverrideBody">
+      <div class="card">
+        <h4>全局指南</h4>
+        <div class="tip">发给 AI 的第一段常驻提示词（运行规则）。改完点保存，下次对话起生效。</div>
+        <textarea id="poGuide" rows="10"></textarea>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h4>操作手册</h4>
+        <div class="tip">紧接全局指南的第二段（软件说明与能力边界）。改完点保存，下次对话起生效。</div>
+        <textarea id="poManual" rows="10"></textarea>
+      </div>
+      <div class="frow" style="margin-top:12px">
+        <button id="poResetBtn" class="btn ghost small">恢复默认</button>
+        <button id="poSaveBtn" class="btn primary small">保存</button>
+      </div>
+      <div id="poHint" class="tip" style="margin-top:8px"></div>
     </div>
   </div>
 
@@ -644,6 +739,16 @@
         <div id="toolList"></div>
       </div>
     </div>
+  </div>
+
+  <!-- v1.1.24 #1：提示词查看器页（B=预览 / A=历史留档） -->
+  <div id="promptPage">
+    <div id="promptBar">
+      <button id="promptBackBtn">← 返回</button>
+      <div class="st" id="promptTitle">提示词查看器</div>
+      <button id="promptClearBtn" style="display:none">清空</button>
+    </div>
+    <div id="promptBody"></div>
   </div>
 
   <!-- 需求③：插件页（暂无插件） -->
@@ -735,6 +840,89 @@ let selectedChannelId = 'builtin';
 let selectedModel = '';
 let editingChannelId = null;
 let currentTheme = 'light';
+// ---------- v1.1.30 #1：主题色（accent）预设 ----------
+// 每色备 light/dark 两套；用户背景 --user 与光晕 --accent-glow 一并跟随，深色用更深的同色系避免刺眼。
+const ACCENT_PRESETS = [
+  { id: 'blue',    name: '蓝',     light: '#3b82f6', dark: '#2563eb' },
+  { id: 'yellow',  name: '黄',     light: '#eab308', dark: '#ca8a04' },   // 原靛蓝→黄
+  { id: 'aqua',    name: '水蓝',   light: '#06b6d4', dark: '#0891b2' },   // 原天蓝→水蓝
+  { id: 'emerald', name: '翡翠绿', light: '#10b981', dark: '#059669' },   // 原翠绿→翡翠绿
+  { id: 'green',   name: '绿',     light: '#22c55e', dark: '#16a34a' },   // 原松绿→绿
+  { id: 'purple',  name: '紫',     light: '#a855f7', dark: '#9333ea' },
+  { id: 'rose',    name: '玫红',   light: '#f43f5e', dark: '#e11d48' },
+  { id: 'orange',  name: '橙',     light: '#f97316', dark: '#ea580c' },
+  { id: 'lemon',   name: '柠檬黄', light: '#fde047', dark: '#facc15' },   // v1.1.34 新增
+  { id: 'red',     name: '红',     light: '#ef4444', dark: '#dc2626' },   // v1.1.34 新增
+  { id: 'mint',    name: '薄荷绿', light: '#34d399', dark: '#10b981' },   // v1.1.34 新增
+  { id: 'azure',   name: '蔚蓝',   light: '#38bdf8', dark: '#0ea5e9' },   // v1.1.34 新增
+];
+let currentAccent = 'blue';
+function accentPreset(id) {
+  for (let i = 0; i < ACCENT_PRESETS.length; i++) if (ACCENT_PRESETS[i].id === id) return ACCENT_PRESETS[i];
+  return ACCENT_PRESETS[0];   // 未知/空 → 默认蓝
+}
+function hexToRgba(hex, a) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+}
+// 填充背景够亮时用黑字，保证任何主题色（含柠檬黄/薄荷绿）上的文字可读。阈值与原生状态栏图标一致=150。
+function onColorFor(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  return lum < 150 ? '#ffffff' : '#111418';
+}
+function applyAccent(id) {
+  const p = accentPreset(id);
+  const dark = currentTheme === 'dark';
+  const color = dark ? p.dark : p.light;   // 边框/文字/选中描边用（深色仍保留可读蓝）
+  const glow = hexToRgba(color, dark ? 0.30 : 0.18);
+  const st = document.body.style;
+  st.setProperty('--accent', color);
+  st.setProperty('--accent-glow', glow);     // 收编写死光晕，跟色一起换
+  // v1.1.31 #1：填充背景与主题色解耦——深色一律黑、用户气泡AI同款；浅色=主题色（保证选非蓝时填充也跟色）
+  const fill = dark ? '#000000' : color;
+  st.setProperty('--accent-fill', fill);
+  st.setProperty('--user-fill',   dark ? '#1f2329' : color);
+  // v1.1.38 #1：统一规则——所有「背景=主题色」元素的字体与其对应边框一律白色，
+  // 唯一例外：浅色模式的「柠檬黄」(p.id==='lemon')背景，其字体与边框转黑。按 id 判定，不用亮度。
+  const fillFg = (!dark && p.id === 'lemon') ? '#111418' : '#ffffff';
+  st.setProperty('--on-fill', fillFg);        // 主题色填充按钮字体(发送/确定/主要按钮/选中项…)
+  st.setProperty('--on-fill-soft', fillFg === '#ffffff' ? 'rgba(255,255,255,.82)' : 'rgba(0,0,0,.55)');
+  st.setProperty('--header-fg', fillFg);      // 顶栏字体
+  st.setProperty('--header-fg-soft', fillFg === '#ffffff' ? 'rgba(255,255,255,.82)' : 'rgba(0,0,0,.55)');
+  st.setProperty('--fill-border', fillFg);    // 主题色背景元素的对应边框(顶栏按钮/选中Tab/开关/候选模型/思考等级)
+  st.setProperty('--user-text', fillFg);      // 用户气泡字体
+  // v1.1.32 #1：状态栏/导航栏色 = 顶栏填充色（修复顶部白边），第一参仍传 theme 兼容既有契约
+  if (window.AppBridge && window.AppBridge.setBars) window.AppBridge.setBars(currentTheme, fill);
+}
+function renderAccentChoices() {
+  const box = $('accentChoices'); if (!box) return;
+  box.innerHTML = '';
+  for (let i = 0; i < ACCENT_PRESETS.length; i++) {
+    const p = ACCENT_PRESETS[i];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'accent-dot' + (accentPreset(currentAccent).id === p.id ? ' on' : '');
+    b.title = p.name;
+    b.style.background = currentTheme === 'dark' ? p.dark : p.light;
+    b.addEventListener('click', () => chooseAccent(p.id));
+    box.appendChild(b);
+  }
+}
+async function chooseAccent(id) {
+  currentAccent = accentPreset(id).id;
+  applyAccent(currentAccent);
+  renderAccentChoices();
+  try {
+    await fetch(API + '/prefs', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accentColor: currentAccent })
+    });
+    $('themeHint').textContent = '主题色已设为「' + accentPreset(currentAccent).name + '」';
+  } catch (e) { $('themeHint').textContent = '主题色已临时切换，保存失败：' + e.message; }
+}
 let skills = [];
 let editingSkillId = null;
 let candidateModels = [];
@@ -970,11 +1158,12 @@ function addTyping() {
   return d;
 }
 function startThinkingTimer(d, t0) {
-  d.innerHTML = '思考中 <span class="secs">0.0s</span><span>.</span><span>.</span><span>.</span>';
+  d.innerHTML = '思考中 <span class="secs">0s</span><span>.</span><span>.</span><span>.</span>';
   typingTimer = setInterval(() => {
     if (!d.parentNode) { stopTypingTimer(); return; }
     const el = d.querySelector('.secs');
-    if (el) el.textContent = ((Date.now() - t0) / 1000).toFixed(1) + 's';
+    // v1.1.29：思考中耗时由 0.1s 改为精确到 1s（取整秒，未满 1s 显 0s）。
+    if (el) el.textContent = Math.floor((Date.now() - t0) / 1000) + 's';
   }, 100);
 }
 function stopTypingTimer() { if (typingTimer) { clearInterval(typingTimer); typingTimer = null; } }
@@ -1101,10 +1290,13 @@ async function selectAgent(id, sid) {
       const d = addMsg(body, m.role === 'user' ? 'user' : 'ai');
       // v1.1.18 #3：历史会话重建「回复耗时」标注——后端已把本轮耗时持久化进
       // 该条消息的 elapsedMs，切换会话不再丢失（受 timingMode 控制，文本与实时同款）。
-      if (timingMode && m.role !== 'user' && m.elapsedMs > 0) {
+      if (m.role !== 'user' && m.elapsedMs > 0) {
+        // v1.1.28 #2：meta 常驻并存 elapsedMs（不受开关过滤创建），按 timingMode 决定显隐，
+        // 这样开关实时刷新与重进会话行为一致；整数秒（不再 .1）。
         const meta = document.createElement('div');
         meta.className = 'msg-meta';
-        meta.textContent = '回复耗时 ' + (m.elapsedMs / 1000).toFixed(1) + 's';
+        meta.setAttribute('data-ms', String(m.elapsedMs));
+        meta.textContent = timingMode ? fmtReplyMeta(m.elapsedMs) : '';
         chatEl.insertBefore(meta, d.nextSibling);
       }
     });
@@ -1215,7 +1407,7 @@ async function send() {
   }
   let bubbleText = text || (onlyImages ? '请查看图片' : (onlyFiles ? '请查看附件' : '请查看图片和附件'));
   if (attNames.length) bubbleText += (bubbleText ? '\n' : '') + attNames.join('\n');
-  inputEl.value = ''; inputEl.style.height = 'auto'; renderInputMirror();
+  inputEl.value = ''; setControlRowHeight(0); renderInputMirror();   // v1.1.26 #2：复位基准 44px
   addMsg(bubbleText, 'user');
   const typing = addTyping();              // 先「接收中...」（不带时间）
   // #6：不再用固定 260ms 定时假装思考。请求真正发出后立即切「思考中」+实时秒数，
@@ -1260,8 +1452,9 @@ async function send() {
       const toolCalls = data.toolCalls || [];
       // v1.1.15 #4：耗时标注放在气泡「外」——独立 .msg-meta 行紧跟气泡，背景=聊天背景
       const attachMeta = (genMs) => {
-        const meta = buildReplyMeta(tStart, tFirst, genMs);
-        if (!meta) return;
+        // v1.1.28 #2：无论当前是否显示耗时，都创建 meta 并存下真实毫秒，
+        // 切换「模型回复时间」开关时可实时显示/隐藏，不必重进会话。
+        const total = Math.max(0, (tFirst || Date.now()) - tStart) + Math.max(0, genMs || 0);
         let m = typing.nextSibling && typing.nextSibling.className === 'msg-meta'
           ? typing.nextSibling : null;
         if (!m) {
@@ -1269,7 +1462,8 @@ async function send() {
           m.className = 'msg-meta';
           if (typing.parentNode) typing.parentNode.insertBefore(m, typing.nextSibling);
         }
-        m.textContent = meta;
+        m.setAttribute('data-ms', String(total));
+        m.textContent = timingMode ? fmtReplyMeta(total) : '';
       };
       if (streamMode && answer.length > 0) {
         let pos = 0;
@@ -1307,11 +1501,21 @@ async function send() {
 }
 /** #8 回复底部标注：只显示真实可测的时间。非流式没有「生成」阶段就不写 0.0 秒；
  *  tokens 上下文因上游普遍不返回 usage，已按需求删掉该功能。 */
-function buildReplyMeta(tStart, tFirst, genMs) {
-  if (!timingMode) return '';
-  // v1.1.15 #4：只标注本轮回复总耗时，不再拆「首字 + 输出」
-  const total = Math.max(0, (tFirst || Date.now()) - tStart) + Math.max(0, genMs || 0);
-  return '回复耗时 ' + (total / 1000).toFixed(1) + 's';
+/** #8 回复底部标注：只显示真实可测的时间。v1.1.29：总耗时恢复精确到 0.1s。 */
+function fmtReplyMeta(ms) {
+  return '回复耗时 ' + (Math.max(0, ms) / 1000).toFixed(1) + 's';
+}
+/** v1.1.28 #2：切换「模型回复时间」开关后实时刷新当前会话所有耗时标注（不需重进）。
+ *  meta 元素常驻 DOM 并带 data-ms，按 timingMode 仅切 textContent 显隐，索引不乱。 */
+function refreshTimingMetas() {
+  const kids = chatEl ? chatEl.children : [];
+  for (let i = 0; i < kids.length; i++) {
+    const el = kids[i];
+    if (el && el.className === 'msg-meta') {
+      const ms = Number(el.getAttribute('data-ms') || '0');
+      el.textContent = timingMode ? fmtReplyMeta(ms) : '';
+    }
+  }
 }
 /** #12 点「取消」中断本次请求，并通知网关把「用户取消了本轮生成」写进上下文，
  *  让之后的 AI 确知这条用户消息存在但本轮未完成（消息本身在网关入口已落库）。 */
@@ -1920,6 +2124,19 @@ function ensureAtOutside() {
   };
   if (document.addEventListener) document.addEventListener('click', atOutsideListener, true);
 }
+// ---------- v1.1.24 #2：技能列表节流刷新 ----------
+// 进入 App 后首次弹 @/加号 列表时，若从未拉过技能就会显示「暂无技能」；
+// 启动预载（见文件末尾 boot）+ 每次弹列表按 3s 节流向后台刷新，刷新完成后重绘。
+let lastSkillsFetch = 0;
+let atLastFilter = '';
+function refreshSkillsThrottled() {
+  const now = Date.now();
+  if (now - lastSkillsFetch <= 3000) return;
+  lastSkillsFetch = now;
+  loadSkills().then(() => {
+    if ($('atList').style.display === 'block') showAtList(atLastFilter);
+  }).catch(() => { /* 网页预览版无此路由，忽略 */ });
+}
 function collectAtItems() {
   const items = [];
   // #18 '插件' 作用域只返回插件（当前为空），不能把技能/工具混进来
@@ -1930,6 +2147,9 @@ function collectAtItems() {
 }
 function showAtList(filter, scope) {
   if (typeof scope === 'string') atScope = scope;
+  atLastFilter = filter || '';
+  // v1.1.24 #2：每次弹列表节流刷新技能缓存（3s 内不重复请求）
+  refreshSkillsThrottled();
   const list = $('atList');
   const q = (filter || '').toLowerCase();
   const items = collectAtItems().filter(x => !q || x.name.toLowerCase().indexOf(q) >= 0);
@@ -2035,7 +2255,8 @@ function applyTheme(theme) {
   document.body.className = currentTheme === 'dark' ? 'dark' : '';
   $('themeLightBtn').className = currentTheme === 'light' ? 'on' : '';
   $('themeDarkBtn').className = currentTheme === 'dark' ? 'on' : '';
-  if (window.AppBridge && window.AppBridge.setBars) window.AppBridge.setBars(currentTheme);
+  applyAccent(currentAccent);          // v1.1.30 #1：深浅切换时主题色按对应深浅版重算；v1.1.32 #1：并同步状态栏色(收口于 applyAccent)
+  renderAccentChoices();               // 色块背景跟随当前深浅模式
 }
 async function loadPrefs() {
   try {
@@ -2043,6 +2264,10 @@ async function loadPrefs() {
     if (!r.ok) { applyTheme('light'); return; }
     const d = await r.json();
     applyTheme(d.theme || 'light');
+    // v1.1.30 #1：主题色（字符串预设键，空/未知 → 默认蓝）。需在 applyTheme 后，依赖 currentTheme
+    currentAccent = accentPreset(d.accentColor || '').id;
+    applyAccent(currentAccent);
+    renderAccentChoices();
     // #8 个性化开关默认全开（老 prefs 里显式写 false 才关）
     streamMode = d.stream !== false;
     agentLoopMode = d.agentLoop !== false;
@@ -2053,6 +2278,11 @@ async function loadPrefs() {
     // v1.1.15 #4：显示工具调用默认关（旧 prefs 里显式 true 才开）
     showToolMode = d.showToolCalls === true;
     userProfileOn = d.userProfileOn !== false;
+    // v1.1.24 #1：测试模式三级开关（默认关）
+    testMode = d.testMode === true;
+    promptViewerOn = d.promptViewerOn === true;
+    promptHistoryOn = d.promptHistoryOn === true;
+    applyTestModeUI();
     $('streamSwitch').className = 'switch' + (streamMode ? ' on' : '');
     $('loopSwitch').className = 'switch' + (showToolMode ? ' on' : '');
     $('timingSwitch').className = 'switch' + (timingMode ? ' on' : '');
@@ -2082,6 +2312,7 @@ function bindOptionSwitches() {
     timingMode = !timingMode;
     $('timingSwitch').className = 'switch' + (timingMode ? ' on' : '');
     togglePref('showTiming', timingMode);
+    refreshTimingMetas();   // v1.1.28 #2：实时刷新当前会话耗时标注，不再需要切换会话
   });
 }
 async function chooseTheme(theme) {
@@ -2101,7 +2332,7 @@ async function loadAbout() {
     const d = await r.json();
     $('aboutUrl').textContent = d.projectUrl || 'https://github.com/asd11288k/helper';
     $('aboutAuthor').textContent = d.author || '子兮';
-    $('aboutVersion').textContent = d.version || '1.1.23';
+    $('aboutVersion').textContent = d.version || '1.1.38';
   } catch (e) { /* 保留 HTML 里的默认值 */ }
 }
 
@@ -2130,6 +2361,45 @@ async function saveUserProfile() {
     const d = await r.json();
     $('userHint').textContent = r.ok ? '已保存' : '保存失败';
   } catch (e) { $('userHint').textContent = '保存失败：' + e.message; }
+}
+
+// ---------- v1.1.27 #4：测试模式修改系统提示词 ----------
+function openPromptOverridePage() {
+  $('promptOverridePage').style.display = 'flex';
+  closeChannelPicker(); closePlusMenu(); closeAtList();
+  loadPromptOverride();
+}
+function closePromptOverridePage() { $('promptOverridePage').style.display = 'none'; }
+async function loadPromptOverride() {
+  try {
+    const r = await fetch(API + '/prompt_override');
+    const d = await r.json();
+    $('poGuide').value = d.guide || '';
+    $('poManual').value = d.manual || '';
+    $('poHint').textContent = d.overridden
+      ? '（已自定义：保存即覆盖；点「恢复默认」还原内置内容）'
+      : '（当前为内置默认内容，修改保存后即覆盖）';
+  } catch (e) { /* 网页预览版无此路由，忽略 */ }
+}
+async function savePromptOverride() {
+  const g = $('poGuide').value;
+  const m = $('poManual').value;
+  try {
+    const r = await fetch(API + '/prompt_override', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guide: g, manual: m }) });
+    $('poHint').textContent = r.ok ? '已保存，下次对话起生效' : '保存失败';
+  } catch (e) { $('poHint').textContent = '保存失败：' + e.message; }
+}
+async function resetPromptOverride() {
+  try {
+    const r = await fetch(API + '/prompt_override', { method: 'DELETE' });
+    const d = await r.json();
+    if (r.ok) {
+      $('poGuide').value = d.guide || '';
+      $('poManual').value = d.manual || '';
+      $('poHint').textContent = '已恢复默认';
+    } else { $('poHint').textContent = '恢复失败'; }
+  } catch (e) { $('poHint').textContent = '恢复失败：' + e.message; }
 }
 
 // ---------- ⑤ 技能管理 ----------
@@ -2230,12 +2500,14 @@ function onHardwareBack() {
   if ($('msgMenu').style.display === 'block') { closeMsgMenu(); return; }
   if ($('skForm').style.display === 'flex' || $('skForm').style.display === 'block') { closeSkillForm(); return; }
   if ($('userPage').style.display === 'flex') { closeUserPage(); return; }
+  if ($('promptOverridePage').style.display === 'flex') { closePromptOverridePage(); return; }
   if ($('chForm').style.display === 'block') { closeChannelForm(); return; }
   if (channelPicker.style.display === 'block') { closeChannelPicker(); return; }
   if ($('modelPicker').style.display === 'flex') { closeModelPicker(false); return; }
   if ($('plusMenu').style.display === 'block') { closePlusMenu(); return; }
   if ($('atList').style.display === 'block') { closeAtList(); return; }
   if (modalEl.style.display === 'flex') { closeModal(); return; }
+  if ($('promptPage').style.display === 'flex') { closePromptPage(); return; }
   if ($('toolsPage').style.display === 'flex') { closeTools(); return; }
   if ($('pluginsPage').style.display === 'flex') { closePlugins(); return; }
   if (skillsPageEl.style.display === 'flex') { closeSkills(); return; }
@@ -2258,9 +2530,25 @@ inputEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   else if (e.key === 'Escape') { closeAtList(); }   // v1.1.20 #2：Esc 收起 @ 列表
 });
+/** v1.1.26 #2：输入栏唯一高度收口。四个控件（+/渠道/输入框框子/发送）共用 #row 的
+ *  --ctlH，只有这一个写入点；任何改动整排一起变，杜绝「改了没效果」。 */
+function setControlRowHeight(contentHeight) {
+  const row = $('row'); if (!row) return;
+  const h = Math.max(44, Math.min(Math.max(contentHeight || 0, 44), 68));   // v1.1.36 #2：封顶 2 行=68px
+  row.style.setProperty('--ctlH', h + 'px');
+}
+/** v1.1.30 #2：量真实内容高前先把 --ctlH 复位到基准 44，解除「被上次撑高后的自身盒高」
+ *  自我锁死（textarea 高=100% 跟随 --ctlH）。删空时 scrollHeight 即回 44，修复不恢复 bug。 */
+function measureInputContentHeight() {
+  const row = $('row');
+  const prev = row ? row.style.getPropertyValue('--ctlH') : '';
+  if (row) row.style.setProperty('--ctlH', '44px');   // 复位 → 触发同步布局，textarea 回自然高
+  const h = inputEl.scrollHeight;                      // 此时读到内容真实所需高（空=44，多行>44）
+  if (row) row.style.setProperty('--ctlH', prev);      // 还原，最终值仍由 setControlRowHeight 统一夹取
+  return h;
+}
 inputEl.addEventListener('input', () => {
-  inputEl.style.height = 'auto';
-  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+  setControlRowHeight(measureInputContentHeight());   // v1.1.30 #2：先复位再量，删空自动恢复原高
   renderInputMirror();   // v1.1.20 #3：正文/删除时同步重绘黄色高亮镜像层
 });
 inputEl.addEventListener('scroll', () => {
@@ -2276,6 +2564,10 @@ skillBtnEl.addEventListener('click', openSkills);
 $('userBtn').addEventListener('click', openUserPage);
 $('userBackBtn').addEventListener('click', closeUserPage);
 $('userSaveBtn').addEventListener('click', saveUserProfile);
+$('devPromptOverrideBtn').addEventListener('click', openPromptOverridePage);
+$('poBackBtn').addEventListener('click', closePromptOverridePage);
+$('poSaveBtn').addEventListener('click', savePromptOverride);
+$('poResetBtn').addEventListener('click', resetPromptOverride);
 $('userProfileSwitch').addEventListener('click', () => {
   userProfileOn = !userProfileOn;
   $('userProfileSwitch').className = 'switch' + (userProfileOn ? ' on' : '');
@@ -2321,6 +2613,165 @@ $('pmFile').addEventListener('click', pickFile);
 $('pmSkill').addEventListener('click', () => quickInsert('技能'));
 $('pmTool').addEventListener('click', () => quickInsert('工具'));
 $('pmPlugin').addEventListener('click', () => quickInsert('插件'));
+
+// ---------- v1.1.24 #1：测试模式 + 提示词查看器（B 预览 / A 历史） ----------
+let testMode = false;          // 总开关（关→两子开关行与菜单入口全隐藏）
+let promptViewerOn = false;    // B：提示词查看器
+let promptHistoryOn = false;   // A：提示词查看器（历史）
+let devUnlocked = false;       // 本次运行是否已连点版本号 7 次（testMode 为 true 时自动解锁）
+let devTapCount = 0, devTapLast = 0;
+
+/** 三个 prefs 开关 + 解锁状态 → UI：关于页 dev 区显隐、加号菜单两入口显隐。 */
+function applyTestModeUI() {
+  if (testMode) devUnlocked = true;   // 测试模式开着，进入关于页就能看到开关
+  else devUnlocked = false;           // 关闭测试模式：三个功能选项整体收回，需再点满 7 次解锁
+  $('devSection').style.display = devUnlocked ? '' : 'none';
+  $('devModeSwitch').className = 'switch' + (testMode ? ' on' : '');
+  $('devPromptViewerSwitch').className = 'switch' + (promptViewerOn ? ' on' : '');
+  $('devPromptHistorySwitch').className = 'switch' + (promptHistoryOn ? ' on' : '');
+  $('devRowPromptViewer').style.display = testMode ? '' : 'none';
+  $('devRowPromptHistory').style.display = testMode ? '' : 'none';
+  $('devRowPromptOverride').style.display = testMode ? '' : 'none';
+  $('pmPrompt').style.display = (testMode && promptViewerOn) ? '' : 'none';
+  $('pmPromptHist').style.display = (testMode && promptHistoryOn) ? '' : 'none';
+}
+function putDevPref(k, v) {
+  try {
+    const b = {}; b[k] = v;
+    fetch(API + '/prefs', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(b) });
+  } catch (e) { /* 忽略 */ }
+}
+$('aboutVersion').style.cursor = 'pointer';
+$('aboutVersion').addEventListener('click', () => {
+  const now = Date.now();
+  if (now - devTapLast > 1500) devTapCount = 0;   // 停顿超 1.5s 重新计数
+  devTapLast = now;
+  devTapCount += 1;
+  if (devTapCount >= 7) {
+    devTapCount = 0;
+    if (!testMode) { testMode = true; putDevPref('testMode', true); }  // 点满 7 次默认开启测试模式
+    applyTestModeUI();
+    // v1.1.28 #4：取消「测试模式已开启」提示——它不会自动消失，反而一直占着状态栏
+  }
+});
+$('devModeSwitch').addEventListener('click', () => {
+  testMode = !testMode;
+  putDevPref('testMode', testMode);
+  if (!testMode) {           // 退出测试模式：子开关同时关闭、菜单入口消失
+    promptViewerOn = false; promptHistoryOn = false;
+    putDevPref('promptViewerOn', false); putDevPref('promptHistoryOn', false);
+  }
+  applyTestModeUI();
+});
+$('devPromptViewerSwitch').addEventListener('click', () => {
+  promptViewerOn = !promptViewerOn;
+  putDevPref('promptViewerOn', promptViewerOn);
+  applyTestModeUI();
+});
+$('devPromptHistorySwitch').addEventListener('click', () => {
+  promptHistoryOn = !promptHistoryOn;
+  putDevPref('promptHistoryOn', promptHistoryOn);
+  applyTestModeUI();
+});
+$('pmPrompt').addEventListener('click', () => openPromptPage('preview'));
+$('pmPromptHist').addEventListener('click', () => openPromptPage('history'));
+
+function segHtml(title, text, open) {
+  return '<div class="pr-item' + (open ? ' open' : '') + '"><div class="pr-head"><b>' + escHtml(title) + '</b>' +
+         '<span class="pr-sum">' + escHtml(String(text || '').replace(/\s+/g, ' ').trim().slice(0, 30)) +
+         ((text || '').length > 30 ? '…' : '') + '</span></div>' +
+         '<div class="pr-detail"><pre>' + escHtml(text || '') + '</pre></div></div>';
+}
+function collectActiveSkills(text) {
+  const names = [];
+  const re = /@\u200b([^\u200b]+)\u200b/g;
+  let mm; while ((mm = re.exec(text || '')) !== null) { if (names.indexOf(mm[1]) < 0) names.push(mm[1]); }
+  return names;
+}
+/** v1.1.26 #1：提示词查看器唯一渲染器。
+ *  按 AI 真实收到的先后顺序输出「一份」完整清单：
+ *  ① 常驻设定（全局指南→操作手册→智能体设定→用户设定→思考等级→本轮技能）
+ *  ② 对话历史（逐条，标明用户/AI）
+ *  ③ 本轮消息（用户真正输入的那条，永远在最后）
+ *  外壳伪装轮（后端已标 shell=true）不再单独成段，因其内容已完整包含在 ① 中。 */
+function renderPromptFlow(host, d) {
+  function add(label, text, open) {
+    const box = document.createElement('div');
+    box.innerHTML = segHtml(label, text, !!open);
+    const el = box.firstChild;
+    if (el && el.querySelector) {
+      el.querySelector('.pr-head').addEventListener('click', () => el.classList.toggle('open'));
+      host.appendChild(el);
+    }
+  }
+  const segs = d.segments || [];
+  let n = 0;
+  segs.forEach(sg => add('第' + (++n) + '部分 · ' + sg.title, sg.text, false));
+  const msgs = (d.messages || []).filter(m => m && !m.shell);
+  // v1.1.27 #1：对话历史可能几百楼，不再逐条分条（否则几百个折叠项无法阅读）。
+  // 合并为「一条」对话上下文，内部用「用户：/AI：」纯文本顺序拼接，整体可折叠。
+  if (msgs.length) {
+    const merged = msgs.map(m => {
+      const role = /^(user|human|google-user)$/.test(String(m.role || '')) ? '用户' : 'AI';
+      return '【' + role + '】' + String(m.content || '');
+    }).join('\n\n');
+    add('第' + (++n) + '部分 · 对话上下文（共 ' + msgs.length + ' 条，含本轮消息）', merged, false);
+  }
+  if (!segs.length && !msgs.length) host.innerHTML = '<div class="tip">返回为空</div>';
+}
+function openPromptPage(mode) {
+  closePlusMenu();
+  $('promptPage').style.display = 'flex';
+  $('promptTitle').textContent = mode === 'history' ? '提示词查看器（历史）' : '提示词查看器';
+  $('promptClearBtn').style.display = mode === 'history' ? '' : 'none';
+  const body = $('promptBody');
+  if (mode === 'preview') {
+    body.innerHTML = '<div class="tip">正在按真实顺序还原 AI 收到的全部提示词…</div>';
+    const vtext = inputEl ? inputEl.value : '';
+    fetch(API + '/prompt_preview', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentId: currentId || '', sessionId: currentSessionId || '',
+        channelId: selectedChannelId || '', prompt: vtext, skills: collectActiveSkills(vtext) }) })
+      .then(r => r.json()).then(d => { body.innerHTML = ''; renderPromptFlow(body, d); })
+      .catch(() => { body.innerHTML = '<div class="tip">预览失败：本地网关未响应</div>'; });
+    return;
+  }
+  body.innerHTML = '<div class="tip">加载中…</div>';
+  fetch(API + '/prompt_log').then(r => r.json()).then(d => {
+    const items = (d.items || []).slice().reverse();   // 最新在前
+    if (!items.length) {
+      body.innerHTML = '<div class="tip">暂无留档。先在 设置→关于→测试模式 里打开「提示词查看器（历史）」，再发几条消息。</div>';
+      return;
+    }
+    body.innerHTML = '';
+    items.forEach((it, idx) => {
+      const row = document.createElement('div');
+      row.className = 'pr-item';
+      const t = new Date(it.ts || 0);
+      const hh = ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) + ':' + ('0' + t.getSeconds()).slice(-2);
+      const head = document.createElement('div');
+      head.className = 'pr-head';
+      head.innerHTML = '<span>第 ' + (items.length - idx) + ' 轮 · ' + hh + ' · ' +
+        escHtml(it.model || it.channel || '') + '</span>' +
+        '<span class="pr-sum">' + escHtml(String(it.prompt || '').slice(0, 24)) +
+        (String(it.prompt || '').length > 24 ? '…' : '') + '</span>';
+      const detail = document.createElement('div');
+      detail.className = 'pr-detail';
+      head.addEventListener('click', () => row.classList.toggle('open'));
+      row.appendChild(head);
+      row.appendChild(detail);
+      body.appendChild(row);
+      renderPromptFlow(detail, it);   // 与预览同一个渲染器：点开就是那一份按顺序的完整清单
+    });
+  }).catch(() => { body.innerHTML = '<div class="tip">读取失败：本地网关未响应</div>'; });
+}
+function closePromptPage() { $('promptPage').style.display = 'none'; }
+$('promptBackBtn').addEventListener('click', closePromptPage);
+$('promptClearBtn').addEventListener('click', () => {
+  if (!confirm('确定清空全部提示词留档吗？')) return;
+  fetch(API + '/prompt_log', { method: 'DELETE' }).then(() => openPromptPage('history'));
+});
+// ---------- v1.1.24 #1 结束 ----------
 // 需求⑥：模型浮层
 $('mpSearch').addEventListener('input', renderModelPicker);
 $('mpAllBtn').addEventListener('click', () => {
@@ -2352,6 +2803,8 @@ loadPrefs();
 loadAgents();
 loadProviders();
 loadTools();
+// v1.1.24 #2：启动预载技能列表，避免首次 @/加号 弹出时显示「暂无技能」
+loadSkills();
 </script>
 </body>
 </html>
