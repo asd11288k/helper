@@ -17,6 +17,7 @@
     --header-fg: #ffffff;            /* v1.1.36 #1：顶栏字体色，仅「柠檬黄」浅底时由JS改黑，其余恒白 */
     --header-fg-soft: rgba(255,255,255,.82);   /* v1.1.36 #1：顶栏副标题色 */
     --user-text: #ffffff;          /* v1.1.37 #1：用户气泡字体色，独立于--on-fill，黄/蔚蓝/薄荷绿强制白 */
+    --status-ok: #d3f8dd;          /* v1.1.39 #1：已连接高亮色，浅色柠檬黄底由JS改黑，其余恒浅绿 */
     --ai: #ffffff;
     --text: #1f2329;
     --sub: #6b7280;
@@ -59,7 +60,7 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #status { font-size: 12px; color: var(--header-fg); flex-shrink: 0; }
   #status.err { color: #ffd7d7; }
-  #status.ok { color: #d3f8dd; font-weight: 700; text-shadow: 0 0 3px rgba(0,0,0,.55); }   /* v1.1.33 #2：加粗+描边增强，亮主题色底也清晰 */
+  #status.ok { color: var(--status-ok); font-weight: 700; }   /* v1.1.33 #2：加粗增强；v1.1.39 #1：柠檬黄底转黑；v1.1.40 #3：去掉虚影(text-shadow) */
   .header-left #toggleBtn, .header-left #newAgentBtn {
     border: 1px solid var(--fill-border); background: transparent; color: var(--header-fg);   /* v1.1.38 #1：边框随主题(白/柠檬黄黑) */
     border-radius: 8px; padding: 6px 9px; font-size: 13px; cursor: pointer;
@@ -74,6 +75,15 @@
     transition: width 0.18s ease; overflow: hidden;
   }
   #sidebar.collapsed { width: 0; border-right: none; }
+  /* v1.1.41 #3：左右滑导航——所有覆盖页用平移进/出动画（slide-r 进 / slide-out 出）。
+     进入即时 display；退出延迟到动画结束再 display:none（由 slideClose 控制），保住"滑出"可见。 */
+  #settingsPage.slide-r, #userPage.slide-r, #skillsPage.slide-r, #toolsPage.slide-r,
+  #pluginsPage.slide-r, #promptPage.slide-r, #promptOverridePage.slide-r { animation: slideInR .22s ease; }
+  #settingsPage.slide-out, #userPage.slide-out, #skillsPage.slide-out, #toolsPage.slide-out,
+  #pluginsPage.slide-out, #promptPage.slide-out, #promptOverridePage.slide-out { animation: slideOutR .22s ease forwards; }
+  @keyframes slideInR { from { transform: translateX(30%); opacity: .4 } to { transform: none; opacity: 1 } }
+  @keyframes slideOutR { from { transform: none; opacity: 1 } to { transform: translateX(30%); opacity: .3 } }
+  /* v1.1.43 #2：tabToR/tabToL 过渡动画已删除——点底栏按钮秒切，左右滑走手势模块真跟手 translateX，两者都不该有 CSS 动画 */
   #agentList {
     flex: 1; overflow-y: auto; padding: 6px;
     display: flex; flex-direction: column; gap: 6px;
@@ -82,6 +92,8 @@
     padding: 9px 10px; border-radius: 10px; background: var(--panel);
     border: 1px solid transparent; cursor: pointer;
     display: flex; flex-direction: column; gap: 2px;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    /* v1.1.40 #4：长按名/设定不触发系统文本选择/复制菜单，确保走拖拽删除流程 */
   }
   .agent-item.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .agent-item .aname { font-size: 14px; font-weight: 600; }
@@ -106,7 +118,9 @@
   /* v1.1.15 #1：气泡右上角 ✕ 已删除，只保留长按菜单「删除」正常色 */
   #msgMenu .mm-del { color: var(--text) !important; }
   #chat { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; min-width: 0; }
-  .msg { max-width: 86%; min-width: 0; padding: 11px 14px; border-radius: 14px; line-height: 1.6; font-size: 15px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+  .msg { max-width: 86%; min-width: 0; padding: 11px 14px; border-radius: 14px; line-height: 1.6; font-size: 15px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
+    /* v1.1.42 #3：长按消息禁止系统提取文字/复制菜单（复制走长按菜单的 JS 主动 copy，不依赖选区） */
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   .msg.user { align-self: flex-end; background: var(--user-fill); color: var(--user-text); border-bottom-right-radius: 4px; }   /* v1.1.37 #1：字体独立变量，黄/蔚蓝/薄荷绿强制白 */
   .msg.ai { align-self: flex-start; background: var(--ai); color: var(--text); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
   .msg.err { align-self: center; background: #fef2f2; color: var(--danger); font-size: 13px; max-width: 92%; border: 1px solid #fecaca; }
@@ -198,6 +212,14 @@
   .frow button { border: none; border-radius: 10px; padding: 9px 14px; font-size: 14px; cursor: pointer; }
   #fOk { background: var(--accent-fill); color: var(--on-fill); }
   #fCancel { background: var(--panel2); color: var(--text); }
+  /* v1.1.41 #2：居中通知弹窗（替代右上角 #status 的临时提示）。z-index 高于所有覆盖页(60)，仅一个"我知道了"按钮。 */
+  #notifyModal { position: fixed; inset: 0; background: rgba(15,23,42,.45); display: none; align-items: center; justify-content: center; z-index: 140; }
+  #notifyModal .notify-box { background: var(--panel); border-radius: 16px; padding: 22px 20px 16px; width: 300px; max-width: 84%; display: flex; flex-direction: column; gap: 16px; }
+  #notifyModal .notify-msg { font-size: 15px; line-height: 1.6; text-align: center; color: var(--text); }
+  #notifyOk { border: none; border-radius: 10px; padding: 10px 14px; font-size: 14px; cursor: pointer; background: var(--accent-fill); color: var(--on-fill); }   /* v1.1.42 #1：确定/我知道了=主题色 */
+  #notifyModal .notify-btns { display: flex; gap: 10px; }
+  #notifyModal .notify-btns button { flex: 1; }
+  #notifyCancel { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 14px; cursor: pointer; background: var(--panel2); color: var(--text); }
 
   /* 设置：独立整页，三分区 */
   #settingsPage { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: none; flex-direction: column; }
@@ -211,9 +233,13 @@
   #settingsTabs button { flex: 1; border: 1px solid var(--line); background: var(--panel2);
     color: var(--sub); border-radius: 10px; padding: 9px 4px; font-size: 13px; cursor: pointer; font-family: inherit; }
   #settingsTabs button.on { background: var(--accent-fill); border-color: var(--fill-border); color: var(--on-fill); font-weight: 600; }   /* v1.1.38 #1：主题色底Tab字体+边框统一 */
-  #settingsBody { flex: 1; overflow-y: auto; padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); }
-  .sec { display: none; }
-  .sec.on { display: block; }
+  /* v1.1.45 #1：#settingsBody 改为"视口"(overflow:hidden、不再自带 padding)；
+   三分区常驻物理并排在 #settingsTrack 上，位置由 translateX(-idx*W) 决定 → 滑动真衔接、无接缝漏白、无横向抖动。 */
+  #settingsBody { flex: 1; overflow: hidden; }
+  #settingsTrack { display: flex; align-items: stretch; height: 100%; width: 100%; will-change: transform; }
+  .sec { flex: 0 0 100%; width: 100%; box-sizing: border-box; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 14px 12px calc(20px + env(safe-area-inset-bottom)); display: block; }
+  .sec.on { display: block; }   /* v1.1.45：.on 只作"当前分区"逻辑标记，可见性由轨道位置决定 */
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
     padding: 14px; margin-bottom: 12px; }
   .card h4 { font-size: 14px; margin-bottom: 4px; }
@@ -346,7 +372,7 @@
      border: none; background: transparent; color: var(--sub); font-size: 15px; cursor: pointer; padding: 4px; }
    /* 需求⑤：键盘弹起时底栏不占位，避免遮挡输入框/搜索框 */
    body.kbd-open #settingsTabs { display: none; }
-   body.kbd-open #settingsBody { padding-bottom: 14px; }
+   body.kbd-open .sec { padding-bottom: 14px; }   /* v1.1.45 #1：padding 已下放到每页，这里同步改目标 */
    .msg .att { display: block; font-size: 12px; opacity: .82; margin-top: 4px;
      border-top: 1px dashed currentColor; padding-top: 4px; }
    .agent-sessions { display: none; flex-direction: column; gap: 4px; margin: 6px 0 2px 4px;
@@ -355,8 +381,10 @@
    .sess-item { display: flex; align-items: center; gap: 4px; font-size: 12px;
      color: var(--sub); background: var(--panel); border-radius: 8px; padding: 6px 7px; cursor: pointer; }
    .sess-item.on { color: var(--accent); border: 1px solid var(--accent); }
-   .sess-item .sname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-   .sess-item .sdel { color: var(--danger); font-size: 11px; padding: 0 2px; }
+    .sess-item .sname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* v1.1.42 #2：会话删除改为红色"删除"文字，点击变红色"确认"（两段式内联确认，无弹窗）。armed 态更醒目 */
+    .sess-item .sdel { color: var(--danger); font-size: 12px; padding: 2px 8px; border: none; border-radius: 8px; cursor: pointer; flex-shrink: 0; -webkit-user-select: none; user-select: none; }   /* v1.1.43 #3：去掉红色边框 */
+    .sess-item .sdel.armed { background: var(--danger); color: #fff !important; }   /* v1.1.43 #3：armed 白字必须 !important，否则被第121行 danger !important 盖成红底红字看不见 */
    .sess-add { font-size: 11px; color: var(--accent); background: transparent; border: none;
      text-align: left; padding: 4px; cursor: pointer; }
    .opt-row { display: flex; align-items: center; justify-content: space-between;
@@ -407,6 +435,37 @@
   #msgMenu button { display: block; width: 100%; text-align: left; border: none; background: transparent;
     color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 13px; cursor: pointer; font-family: inherit; }
   #msgMenu button:active { background: var(--panel2); }
+  /* v1.1.39 #3：长按拖拽删除智能体——右上角显眼垃圾桶(临时覆盖周围按钮)+跟手幽灵+抖动 */
+  #trashBtn {
+    position: fixed; top: calc(12px + env(safe-area-inset-top)); right: 12px; z-index: 120;
+    display: none; align-items: center; gap: 7px; padding: 13px 17px; border-radius: 16px;
+    background: var(--panel); color: var(--text); border: 2px solid var(--line);
+    box-shadow: 0 10px 30px rgba(15,23,42,.30); font-size: 14px; font-weight: 700;
+    transition: transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease;
+  }
+  #trashBtn.show { display: flex; animation: trashIn .24s cubic-bezier(.34,1.56,.64,1); }
+  #trashBtn .ti { font-size: 23px; line-height: 1; }
+  #trashBtn.armed { background: var(--danger); color: #fff; border-color: var(--danger); transform: scale(1.14); }
+  #trashBtn.armed .ti { animation: trashPop .35s ease; }
+  @keyframes trashIn { 0% { transform: translateY(-18px) scale(.7); opacity: 0 } 100% { transform: none; opacity: 1 } }
+  @keyframes trashPop { 0%,100% { transform: scale(1) } 40% { transform: scale(1.35) rotate(-8deg) } }
+  #dragGhost {
+    position: fixed; z-index: 130; display: none; pointer-events: none;
+    width: 156px; max-width: 60vw; box-sizing: border-box;
+    padding: 9px 10px; border-radius: 10px;
+    background: var(--panel); border: 1px solid var(--accent);
+    box-shadow: 0 12px 34px rgba(15,23,42,.34); color: var(--text); opacity: .96;
+    /* v1.1.40 #4：幽灵=智能体框本身(非名字)，居中跟手、不旋转(正的) */
+    transform: translate(-50%, -50%);
+  }
+  #dragGhost .g-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #dragGhost .g-cnt { font-size: 11px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #dragGhost.show { display: block; }
+  body.dragging { -webkit-user-select: none; user-select: none; }
+  body.dragging .agent-item { cursor: grabbing; }
+  body.dragging .agent-item { animation: itemShake .3s ease-in-out infinite; }   /* v1.1.40 #4：抖动整框而非名字 */
+  body.dragging .agent-item.dragging-src { opacity: .35; }
+  @keyframes itemShake { 0%,100% { transform: translateX(0) rotate(0) } 25% { transform: translateX(-2px) rotate(-1deg) } 75% { transform: translateX(2px) rotate(1deg) } }
   #msgEdit { position: fixed; inset: 0; z-index: 95; background: rgba(15,23,42,.45);
     display: none; align-items: center; justify-content: center; }
   #msgEdit .me-box { background: var(--panel); border-radius: 16px; padding: 18px; width: 310px;
@@ -477,7 +536,7 @@
         </div>
         <button id="editAgentBtn">编辑</button>
         <button id="clearChatBtn">清除消息</button>
-        <button id="delAgentBtn">删除</button>
+        <button id="delAgentBtn">删除会话</button>
       </div>
       <div id="chat"></div>
        <div id="bar">
@@ -529,6 +588,17 @@
     </div>
   </div>
 
+  <!-- v1.1.42 #1：统一对话框组件——取代所有系统 confirm/alert/退出框。alert=单"我知道了"，confirm=取消/确定(确定=主题色)。 -->
+  <div id="notifyModal">
+    <div class="notify-box">
+      <div class="notify-msg" id="notifyMsg"></div>
+      <div class="notify-btns">
+        <button id="notifyCancel" style="display:none">取消</button>
+        <button id="notifyOk">我知道了</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 设置：独立页面，三分区 -->
   <div id="settingsPage">
     <div id="settingsBar">
@@ -536,6 +606,7 @@
       <div class="st">设置</div>
     </div>
     <div id="settingsBody">
+     <div id="settingsTrack">   <!-- v1.1.45 #1：三分区常驻物理并排的水平轨道，非当前页靠外层 overflow:hidden 视口裁切 -->
       <!-- 模型设置 -->
       <div id="tabModels" class="sec on">
         <div class="card">
@@ -584,7 +655,7 @@
           <div class="tip">简单对话助手</div>
           <div class="about-row"><span class="k">项目地址</span><span class="v" id="aboutUrl">https://github.com/asd11288k/helper</span></div>
           <div class="about-row"><span class="k">作者</span><span class="v" id="aboutAuthor">子兮</span></div>
-          <div class="about-row"><span class="k">版本号</span><span class="v" id="aboutVersion">1.1.38</span></div>
+          <div class="about-row"><span class="k">版本号</span><span class="v" id="aboutVersion">1.1.45</span></div>
           <!-- v1.1.24 #1：连点版本号 7 次解锁测试模式三开关（默认隐藏） -->
           <div id="devSection" style="display:none">
             <div class="opt-row">
@@ -609,9 +680,10 @@
             </div>
           </div>
          </div>
-       </div>
-     </div>
-    <div id="settingsTabs">
+        </div>
+      </div>   <!-- /#settingsTrack (v1.1.45 #1) -->
+     </div>   <!-- /#settingsBody -->
+     <div id="settingsTabs">
       <button id="tabBtnModels" class="on">模型设置</button>
       <button id="tabBtnPersonal">个性化</button>
       <button id="tabBtnAbout">关于</button>
@@ -796,6 +868,10 @@
     </div>
   </div>
 
+  <!-- v1.1.39 #3：长按拖拽删除智能体——右上角显眼垃圾桶 + 跟手幽灵浮层 -->
+  <div id="trashBtn" aria-hidden="true"><span class="ti">🗑</span><span class="tl">拖到此处删除</span></div>
+  <div id="dragGhost" aria-hidden="true"></div>
+
 <script>
 const $ = (id) => document.getElementById(id);
 const chatEl = $('chat');
@@ -842,24 +918,24 @@ let editingChannelId = null;
 let currentTheme = 'light';
 // ---------- v1.1.30 #1：主题色（accent）预设 ----------
 // 每色备 light/dark 两套；用户背景 --user 与光晕 --accent-glow 一并跟随，深色用更深的同色系避免刺眼。
-const ACCENT_PRESETS = [
-  { id: 'blue',    name: '蓝',     light: '#3b82f6', dark: '#2563eb' },
-  { id: 'yellow',  name: '黄',     light: '#eab308', dark: '#ca8a04' },   // 原靛蓝→黄
-  { id: 'aqua',    name: '水蓝',   light: '#06b6d4', dark: '#0891b2' },   // 原天蓝→水蓝
-  { id: 'emerald', name: '翡翠绿', light: '#10b981', dark: '#059669' },   // 原翠绿→翡翠绿
-  { id: 'green',   name: '绿',     light: '#22c55e', dark: '#16a34a' },   // 原松绿→绿
+const ACCENT_PRESETS = [   // v1.1.42 #4：废翡翠绿→酸橙；按色相光谱排序（红橙黄柠檬酸橙绿薄荷 水蓝蔚蓝蓝紫玫红）
+  { id: 'red',     name: '红',     light: '#ef4444', dark: '#dc2626' },
+  { id: 'orange',  name: '橙',     light: '#f97316', dark: '#ea580c' },
+  { id: 'yellow',  name: '黄',     light: '#eab308', dark: '#ca8a04' },
+  { id: 'lemon',   name: '柠檬黄', light: '#fde047', dark: '#facc15' },
+  { id: 'acid',    name: '酸橙',   light: '#84cc16', dark: '#65a30d' },   // v1.1.42 #4：替代翡翠绿，填充底恒白字(不进lemon黑字特判)
+  { id: 'green',   name: '绿',     light: '#22c55e', dark: '#16a34a' },
+  { id: 'mint',    name: '薄荷绿', light: '#34d399', dark: '#10b981' },
+  { id: 'aqua',    name: '水蓝',   light: '#06b6d4', dark: '#0891b2' },
+  { id: 'azure',   name: '蔚蓝',   light: '#38bdf8', dark: '#0ea5e9' },
+  { id: 'blue',    name: '蓝',     light: '#3b82f6', dark: '#2563eb' },   // 默认色(id顺序变了但默认仍取 accentPreset 兜底 blue)
   { id: 'purple',  name: '紫',     light: '#a855f7', dark: '#9333ea' },
   { id: 'rose',    name: '玫红',   light: '#f43f5e', dark: '#e11d48' },
-  { id: 'orange',  name: '橙',     light: '#f97316', dark: '#ea580c' },
-  { id: 'lemon',   name: '柠檬黄', light: '#fde047', dark: '#facc15' },   // v1.1.34 新增
-  { id: 'red',     name: '红',     light: '#ef4444', dark: '#dc2626' },   // v1.1.34 新增
-  { id: 'mint',    name: '薄荷绿', light: '#34d399', dark: '#10b981' },   // v1.1.34 新增
-  { id: 'azure',   name: '蔚蓝',   light: '#38bdf8', dark: '#0ea5e9' },   // v1.1.34 新增
 ];
 let currentAccent = 'blue';
 function accentPreset(id) {
   for (let i = 0; i < ACCENT_PRESETS.length; i++) if (ACCENT_PRESETS[i].id === id) return ACCENT_PRESETS[i];
-  return ACCENT_PRESETS[0];   // 未知/空 → 默认蓝
+  const _b = ACCENT_PRESETS.filter(p => p.id === 'blue')[0]; return _b || ACCENT_PRESETS[0];   // v1.1.42 #4：色板重排后未知/空仍回退默认蓝
 }
 function hexToRgba(hex, a) {
   const h = hex.replace('#', '');
@@ -894,6 +970,8 @@ function applyAccent(id) {
   st.setProperty('--header-fg-soft', fillFg === '#ffffff' ? 'rgba(255,255,255,.82)' : 'rgba(0,0,0,.55)');
   st.setProperty('--fill-border', fillFg);    // 主题色背景元素的对应边框(顶栏按钮/选中Tab/开关/候选模型/思考等级)
   st.setProperty('--user-text', fillFg);      // 用户气泡字体
+  // v1.1.39 #1：「已连接」高亮色——浅色柠檬黄底转黑(可读)，其余主题色保留浅绿增强(v1.1.33)；深色=浅绿
+  st.setProperty('--status-ok', (!dark && p.id === 'lemon') ? '#111418' : '#d3f8dd');
   // v1.1.32 #1：状态栏/导航栏色 = 顶栏填充色（修复顶部白边），第一参仍传 theme 兼容既有契约
   if (window.AppBridge && window.AppBridge.setBars) window.AppBridge.setBars(currentTheme, fill);
 }
@@ -959,6 +1037,51 @@ const API = (location.protocol === 'http:' ? '' : 'http://127.0.0.1:8000');
 function setStatus(text, cls) {
   statusEl.textContent = text;
   statusEl.className = cls || '';
+}
+// v1.1.42 #1：统一对话框组件——取代所有系统 confirm/alert/原生退出框。
+// 显示时压暗系统状态栏(方案C,经原生桥接 setStatusbarDim)、隐藏还原。alert=单"我知道了"，confirm=取消/确定(确定=主题色)→Promise<boolean>。
+let _dialogResolve = null;
+// v1.1.43 #3：会话删除"确认"态的全局登记；点任意空白即取消并复位回"删除"。
+let sdelDisarm = null;
+document.addEventListener('click', () => { if (sdelDisarm) { try { sdelDisarm(); } catch (e) { sdelDisarm = null; } } });
+function _dialogDim(on) {
+  try { if (window.AppBridge && window.AppBridge.setStatusbarDim) window.AppBridge.setStatusbarDim(!!on); } catch (e) {}
+}
+function _dialogShow(opts) {
+  const m = $('notifyModal'), msg = $('notifyMsg'), ok = $('notifyOk'), cancel = $('notifyCancel');
+  if (!m || !msg) return;
+  msg.textContent = opts.msg || '';
+  if (ok) ok.textContent = opts.okText || '确定';
+  if (cancel) { cancel.textContent = opts.cancelText || '取消'; cancel.style.display = opts.hasCancel ? '' : 'none'; }
+  m.style.display = 'flex';
+  _dialogDim(true);
+}
+function notify(text) { _dialogResolve = null; _dialogShow({ msg: text, okText: '我知道了', hasCancel: false }); }
+function askConfirm(message, okText, cancelText) {   // Promise<boolean>
+  return new Promise((resolve) => {
+    _dialogResolve = resolve;
+    _dialogShow({ msg: message, okText: okText || '确定', cancelText: cancelText, hasCancel: true });
+  });
+}
+function closeNotify(confirmed) {
+  const m = $('notifyModal'); if (m) m.style.display = 'none';
+  _dialogDim(false);
+  if (_dialogResolve) { const r = _dialogResolve; _dialogResolve = null; r(confirmed === true); }
+}
+// v1.1.41 #3：覆盖页统一平移进/出。进入即时显示并播 slideInR；退出播 slideOutR，
+// 动画结束(SLIDE_MS)后才真正 display:none，确保"滑出"可见。close 幂等，可被返回键/手势安全复用。
+const SLIDE_MS = 230;
+function slideOpen(el) {
+  if (!el) return;
+  if (el.classList) { el.classList.remove('slide-out'); el.classList.add('slide-r'); }
+  el.style.display = 'flex';
+}
+function slideClose(el) {
+  if (!el) return;
+  if (!el.classList) { el.style.display = 'none'; return; }
+  el.classList.remove('slide-r');
+  el.classList.add('slide-out');
+  setTimeout(function () { el.style.display = 'none'; el.classList.remove('slide-out'); }, SLIDE_MS);
 }
 function scrollBottom() { chatEl.scrollTop = chatEl.scrollHeight; }
 /** #7 解析模型输出里的思考段；返回 { think, body }，兼容多种思考标签。 */
@@ -1076,6 +1199,7 @@ function clearLongPress() { if (longPressTimer) { clearTimeout(longPressTimer); 
 /** #10 长按菜单：复制 / 编辑 / 删除（删除二次确认，编辑与删除直接改持久化上下文）。 */
 function openMsgMenu(bubble, idx, x, y) {
   clearLongPress();
+  vibrate();   // v1.1.39 #3：长按弹菜单同步震动（复用同一震动 helper）
   msgMenuIdx = idx; msgMenuBubble = bubble;
   const menu = $('msgMenu');
   menu.style.display = 'block';
@@ -1123,7 +1247,7 @@ function copyMsgText(text) {
 async function deleteHistoryMessage(idx) {
   if (!currentId || !Number.isFinite(idx)) return;
   // #10 删除要二次确认，但按钮用正常色（常用按钮不需警惕色）
-  if (!confirm('确定删除这条消息吗？删除后 AI 也不会再把它带入上下文。')) return;
+  if (!(await askConfirm('确定删除这条消息吗？删除后 AI 也不会再把它带入上下文。', '删除', '取消'))) return;
   try {
     const r = await fetch(API + '/agents/' + currentId + '/messages/' + idx, {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' },
@@ -1190,12 +1314,14 @@ function renderList() {
     d.title = a.setting || '';
     d.appendChild(name); d.appendChild(cnt);
     d.addEventListener('click', () => {
+      if (dragMode) return;   // v1.1.39 #3：拖拽删除模式下点击不切换（只用于拖拽）
       if (expandedAgentId === a.id) { expandedAgentId = ''; renderList(); return; }
       expandedAgentId = a.id;
       currentSessionId = a.activeSessionId || (a.sessions && a.sessions[0] && a.sessions[0].id) || '';
       renderList();
       selectAgent(a.id, currentSessionId);
     });
+    bindAgentDrag(d, a);   // v1.1.39 #3：长按拖拽删除
     agentListEl.appendChild(d);
     if (expandedAgentId === a.id) {
       const box = document.createElement('div');
@@ -1205,7 +1331,7 @@ function renderList() {
         row.className = 'sess-item' + (ss.id === currentSessionId ? ' on' : '');
         const nm = document.createElement('span'); nm.className = 'sname';
         nm.textContent = '💬 ' + (ss.name || '会话') + ' · ' + (ss.count || 0);
-        const del = document.createElement('span'); del.className = 'sdel'; del.textContent = '✕';
+        const del = document.createElement('span'); del.className = 'sdel'; del.textContent = '删除';   // v1.1.42 #2：两段式内联确认
         row.appendChild(nm); row.appendChild(del);
         row.addEventListener('click', (ev) => {
           ev.stopPropagation();
@@ -1217,10 +1343,19 @@ function renderList() {
           selectAgent(a.id, ss.id);
           renderList();
         });
+        let delArmed = false, delTimer = null;
+        const disarmDel = () => { delArmed = false; del.textContent = '删除'; if (del.classList) del.classList.remove('armed'); if (delTimer) { clearTimeout(delTimer); delTimer = null; } if (sdelDisarm === disarmDel) sdelDisarm = null; };   // v1.1.43 #3：解除全局登记
         del.addEventListener('click', async (ev) => {
           ev.stopPropagation();
-          if ((a.sessions || []).length <= 1) return;
-          if (!confirm('确定删除该会话吗？该会话的历史消息会一并删除，且不可恢复。')) return;
+          if (!delArmed) {   // v1.1.42 #2：第一次点击 → 变红色"确认"（两段式内联确认，无弹窗）
+            if ((a.sessions || []).length <= 1) { notify('这是最后一个会话，无法删除'); return; }
+            if (sdelDisarm && sdelDisarm !== disarmDel) sdelDisarm();   // v1.1.43 #3：同一时刻只允许一个处于确认态
+            delArmed = true; del.textContent = '确认'; if (del.classList) del.classList.add('armed');
+            sdelDisarm = disarmDel;   // v1.1.43 #3：登记，供"点任意空白取消"使用
+            delTimer = setTimeout(disarmDel, 3000);   // 3 秒未确认自动复位
+            return;
+          }
+          disarmDel();
           await fetch(API + '/agents/' + a.id + '/sessions/' + ss.id, { method: 'DELETE' });
           await loadAgents();
           currentSessionId = '';
@@ -1357,19 +1492,125 @@ async function saveAgent() {
     }
   } catch (e) { setStatus('保存失败', 'err'); }
 }
-async function deleteCurrent() {
+/** v1.1.39 #2：顶栏「删除」改为删除当前会话（入口从列表迁移到此，二次确认文案与列表删会话完全一致）。
+ *  删除智能体的入口改由需求3「长按拖到垃圾桶」承担。仅剩一个会话时不删除并提示。 */
+async function deleteCurrentSession() {
   if (!currentId) return;
-  if (!confirm('确定删除该智能体及其所有对话吗？')) return;
-  await fetch(API + '/agents/' + currentId, { method: 'DELETE' });
-  currentId = null;
-  chatEl.innerHTML = '';
-  await loadAgents();
-  if (!agents.length) showEmpty();
+  const a = agents.find(x => x.id === currentId);
+  const list = (a && a.sessions) || [];
+  if (list.length <= 1) { notify('这是最后一个会话，无法删除'); return; }
+  const sid = currentSessionId || list[0].id;
+  if (!(await askConfirm('确定删除该会话吗？该会话的历史消息会一并删除，且不可恢复。', '删除', '取消'))) return;
+  try {
+    await fetch(API + '/agents/' + currentId + '/sessions/' + sid, { method: 'DELETE' });
+    if (currentSessionId === sid) currentSessionId = '';
+    await loadAgents();
+    selectAgent(currentId, '');
+  } catch (e) { setStatus('删除会话失败', 'err'); }
+}
+// ---------- v1.1.39 #3：长按拖拽删除智能体（垃圾桶 + 跟手幽灵 + 抖动 + 震动） ----------
+let dragMode = false;       // 拖拽删除模式（一次长按后持续，直到返回键退出）
+let dragActiveId = null;    // 当前正被手指拖着（幽灵跟手）的智能体 id
+function vibrate(ms) {      // 震动 helper：优先原生 AppBridge.vibrate，回落 navigator.vibrate
+  ms = ms || 15;
+  try {
+    if (window.AppBridge && window.AppBridge.vibrate) window.AppBridge.vibrate(ms);
+    else if (navigator.vibrate) navigator.vibrate(ms);
+  } catch (e) { /* 不支持则忽略 */ }
+}
+function overTrash(x, y) {
+  const t = $('trashBtn'); if (!t || !t.getBoundingClientRect) return false;
+  const r = t.getBoundingClientRect();
+  return x >= r.left - 14 && x <= r.right + 14 && y >= r.top - 14 && y <= r.bottom + 14;
+}
+function showGhost(a, x, y) { const g = $('dragGhost'); if (!g || !a) return;
+  // v1.1.40 #4：幽灵呈现整个智能体框内容（名+设定·条数），与拖拽对象一致
+  const nm = document.createElement('div'); nm.className = 'g-name'; nm.textContent = brief(a.name, 12);
+  const ct = document.createElement('div'); ct.className = 'g-cnt';
+  ct.textContent = brief(a.setting, 16) + (a.setting ? ' · ' : '') + (a.count || 0) + ' 条';
+  g.innerHTML = ''; if (g.appendChild) { g.appendChild(nm); g.appendChild(ct); } else g.textContent = a.name;
+  g.style.left = x + 'px'; g.style.top = y + 'px'; g.classList.add('show');
+}
+function moveGhost(x, y) { const g = $('dragGhost'); if (!g) return; g.style.left = x + 'px'; g.style.top = y + 'px'; }
+function hideGhost() { const g = $('dragGhost'); if (g) g.classList.remove('show'); }
+function enterDragMode() {
+  if (dragMode) return;
+  dragMode = true;
+  document.body.classList.add('dragging');
+  const t = $('trashBtn'); if (t) t.classList.add('show');
+}
+function stopDragMode() {
+  dragMode = false; dragActiveId = null;
+  document.body.classList.remove('dragging');
+  const t = $('trashBtn'); if (t) { t.classList.remove('show'); t.classList.remove('armed'); }
+  hideGhost();
+  renderList();   // 重渲染清除 dragging-src 残留与抖动
+}
+async function dropDrag(aid) {   // 拖入红色垃圾桶 = 进入删除确认（二次确认后才真删）
+  const a = agents.find(x => x.id === aid); if (!a) return;
+  vibrate(30);
+  if (!(await askConfirm('确定删除该智能体及其所有对话吗？', '删除', '取消'))) {
+    const t = $('trashBtn'); if (t) t.classList.remove('armed');
+    return;   // 取消则维持拖拽模式，可继续拖别的
+  }
+  try {
+    await fetch(API + '/agents/' + aid, { method: 'DELETE' });
+    if (currentId === aid) currentId = null;
+    await loadAgents();          // 重渲染：其余智能体框继续抖动，模式保持
+    if (!agents.length) { showEmpty(); stopDragMode(); }
+    // v1.1.40 #2：不再往右上角 #status 写"已删除xx"提示（不会自动清除，用户明确要求移除）
+  } catch (e) { setStatus('删除失败', 'err'); }
+}
+function bindAgentDrag(d, a) {   // 为单个智能体条目绑定长按进入拖拽 + 拖拽跟手 + 投放删除
+  if (!d || !d.addEventListener) return;
+  let lpTimer = null, downX = 0, downY = 0;
+  // v1.1.40 #4：阻止长按智能体名/设定触发系统文本选择/复制菜单（双保险：CSS callout + contextmenu）
+  d.addEventListener('contextmenu', (ev) => { if (ev.preventDefault) ev.preventDefault(); return false; });
+  d.addEventListener('selectstart', (ev) => { if (ev.preventDefault) ev.preventDefault(); });
+  d.addEventListener('touchstart', (ev) => {
+    const t = ev.touches && ev.touches[0]; if (!t) return;
+    downX = t.clientX; downY = t.clientY;
+    d.classList.add('dragging-src');
+    if (dragMode) {                       // 已在模式：直接拖这一条
+      dragActiveId = a.id; enterDragMode(); vibrate(10);
+      showGhost(a, downX, downY);
+    } else {                              // 首次：长按 480ms 进入模式
+      lpTimer = setTimeout(() => {
+        lpTimer = null; dragActiveId = a.id; enterDragMode(); vibrate();
+        showGhost(a, downX, downY);
+      }, 480);
+    }
+  });
+  d.addEventListener('touchmove', (ev) => {
+    const t = ev.touches && ev.touches[0]; if (!t) return;
+    if (!dragActiveId) {                  // 尚未进入拖拽：若明显滑动则取消长按（让列表正常滚动）
+      const dx = t.clientX - downX, dy = t.clientY - downY;
+      if (dx * dx + dy * dy > 64 && lpTimer) { clearTimeout(lpTimer); lpTimer = null; d.classList.remove('dragging-src'); }
+      return;
+    }
+    moveGhost(t.clientX, t.clientY);
+    const tr = $('trashBtn'); if (tr) tr.classList.toggle('armed', overTrash(t.clientX, t.clientY));
+    if (ev.preventDefault) ev.preventDefault();
+  });
+  const end = (ev) => {
+    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    d.classList.remove('dragging-src');
+    if (dragActiveId) {
+      const t = (ev.changedTouches && ev.changedTouches[0]) || null;
+      const x = t ? t.clientX : downX, y = t ? t.clientY : downY;
+      const aid = dragActiveId; dragActiveId = null;
+      hideGhost();
+      const tr = $('trashBtn'); if (tr) tr.classList.remove('armed');
+      if (overTrash(x, y)) dropDrag(aid);  // 命中垃圾桶 → 删除；模式与抖动继续
+    }
+  };
+  d.addEventListener('touchend', end);
+  d.addEventListener('touchcancel', end);
 }
 /** 清除当前会话的历史上下文，会话本身保留。 */
 async function clearChat() {
   if (!currentId) return;
-  if (!confirm('确定清除该会话的历史上下文吗？此会话会保留')) return;
+  if (!(await askConfirm('确定清除该会话的历史上下文吗？此会话会保留', '清除', '取消'))) return;
   try {
     const r = await fetch(API + '/agents/' + currentId + '/clear', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1771,7 +2012,7 @@ async function toggleChannel(id, enabled) {
   await loadChannels();
 }
 async function deleteChannel(id) {
-  if (!confirm('确定删除这个渠道吗？')) return;
+  if (!(await askConfirm('确定删除这个渠道吗？', '删除', '取消'))) return;
   await fetch(API + '/channels/' + id, { method: 'DELETE' });
   await loadChannels();
 }
@@ -2010,16 +2251,16 @@ function renderToolList() {
   });
 }
 function openTools() {
-  $('toolsPage').style.display = 'flex';
+  slideOpen($('toolsPage'));
   closeChannelPicker(); closePlusMenu(); closeAtList();
   loadTools();
 }
-function closeTools() { $('toolsPage').style.display = 'none'; }
+function closeTools() { slideClose($('toolsPage')); }
 function openPlugins() {
-  $('pluginsPage').style.display = 'flex';
+  slideOpen($('pluginsPage'));
   closeChannelPicker(); closePlusMenu(); closeAtList();
 }
-function closePlugins() { $('pluginsPage').style.display = 'none'; }
+function closePlugins() { slideClose($('pluginsPage')); }
 
 // ---------- 需求⑩：+ 菜单 ----------
 let plusOutsideListener = null;
@@ -2226,13 +2467,40 @@ inputEl.addEventListener('input', () => {
 });
 
 // ---------- 设置页 / 个性化 / 关于 ----------
-function switchTab(name) {
-  ['Models', 'Personal', 'About'].forEach(n => {
+// v1.1.45 #1：三分区改为"常驻物理并排轨道"。可见性由 #settingsTrack 的 translateX 决定，
+// .on 只作当前分区逻辑标记。点击=无动画瞬移到目标格；拖拽=轨道 1:1 跟手；松手=吸附。
+const SETTINGS_TABS = ['Models', 'Personal', 'About'];
+function trackEl() { return $('settingsTrack'); }
+function settingsIdx() {
+  for (let i = 0; i < SETTINGS_TABS.length; i++) {
+    const e = $('tab' + SETTINGS_TABS[i]);
+    if (e && e.classList && e.classList.contains('on')) return i;
+  }
+  return 0;
+}
+function settingsW() {
+  const b = $('settingsBody');
+  return (b && b.clientWidth) || winW();
+}
+// 把轨道摆到第 i 格（px 可为小数用于跟手）；anim=false → 无过渡（秒切/跟手）
+function trackPlace(px, anim) {
+  const t = trackEl(); if (!t || !t.style) return;
+  t.style.transition = anim ? 'transform .22s ease' : 'none';
+  t.style.transform = 'translateX(' + px + 'px)';
+}
+function switchTab(name, snap) {   // snap=true → 轨道带动画吸附到目标格（手势松手用）；默认 false → 瞬移（点底栏秒切）
+  SETTINGS_TABS.forEach(n => {
     const on = n === name;
-    $('tab' + n).className = on ? 'sec on' : 'sec';
+    const sec = $('tab' + n);
+    if (sec) sec.className = on ? 'sec on' : 'sec';
     $('tabBtn' + n).className = on ? 'on' : '';
   });
+  trackPlace(-settingsIdx() * settingsW(), !!snap);
 }
+// v1.1.45 #1：转屏/窗口尺寸变化后按新格宽重定位轨道，避免错位（无动画，直接对齐）
+if (window.addEventListener) window.addEventListener('resize', function () {
+  try { trackPlace(-settingsIdx() * settingsW(), false); } catch (e) {}
+});
 /** 用 /channels 探测：只有 App 本地网关有此路由，网页预览版自动隐藏设置入口。 */
 async function loadSettings() {
   try {
@@ -2243,13 +2511,11 @@ async function loadSettings() {
   } catch (e) { /* 探测失败即隐藏，网页版不受影响 */ }
 }
 function openSettings() {
-  settingsPageEl.style.display = 'flex';
-  switchTab('Models');
-  loadChannels();
-  loadPrefs();
-  loadAbout();
+  slideOpen(settingsPageEl);
+  loadSettingsData();
 }
-function closeSettings() { settingsPageEl.style.display = 'none'; }
+function loadSettingsData() { switchTab('Models'); loadChannels(); loadPrefs(); loadAbout(); }   // v1.1.42 #5：跟手进入设置时单独加载数据(不走 slideOpen 的 CSS 动画)
+function closeSettings() { slideClose(settingsPageEl); }
 function applyTheme(theme) {
   currentTheme = theme === 'dark' ? 'dark' : 'light';
   document.body.className = currentTheme === 'dark' ? 'dark' : '';
@@ -2332,17 +2598,17 @@ async function loadAbout() {
     const d = await r.json();
     $('aboutUrl').textContent = d.projectUrl || 'https://github.com/asd11288k/helper';
     $('aboutAuthor').textContent = d.author || '子兮';
-    $('aboutVersion').textContent = d.version || '1.1.38';
+    $('aboutVersion').textContent = d.version || '1.1.45';
   } catch (e) { /* 保留 HTML 里的默认值 */ }
 }
 
 // ---------- #17 用户设定 ----------
 function openUserPage() {
-  $('userPage').style.display = 'flex';
+  slideOpen($('userPage'));
   closeChannelPicker(); closePlusMenu(); closeAtList();
   loadUserProfile();
 }
-function closeUserPage() { $('userPage').style.display = 'none'; }
+function closeUserPage() { slideClose($('userPage')); }
 async function loadUserProfile() {
   try {
     const r = await fetch(API + '/profile', { method: 'GET' });
@@ -2365,11 +2631,11 @@ async function saveUserProfile() {
 
 // ---------- v1.1.27 #4：测试模式修改系统提示词 ----------
 function openPromptOverridePage() {
-  $('promptOverridePage').style.display = 'flex';
+  slideOpen($('promptOverridePage'));
   closeChannelPicker(); closePlusMenu(); closeAtList();
   loadPromptOverride();
 }
-function closePromptOverridePage() { $('promptOverridePage').style.display = 'none'; }
+function closePromptOverridePage() { slideClose($('promptOverridePage')); }
 async function loadPromptOverride() {
   try {
     const r = await fetch(API + '/prompt_override');
@@ -2404,13 +2670,13 @@ async function resetPromptOverride() {
 
 // ---------- ⑤ 技能管理 ----------
 function openSkills() {
-  skillsPageEl.style.display = 'flex';
+  slideOpen(skillsPageEl);
   $('skForm').style.display = 'none';
   $('skillsBody').style.display = '';   // v1.1.19 #1：进入技能页确保列表可见（防御上次遗留）
   closeChannelPicker();
   loadSkills();
 }
-function closeSkills() { skillsPageEl.style.display = 'none'; }
+function closeSkills() { slideClose(skillsPageEl); }
 async function loadSkills() {
   try {
     const r = await fetch(API + '/skills', { method: 'GET' });
@@ -2487,7 +2753,7 @@ async function saveSkill() {
   } catch (e) { $('skFormTip').textContent = '保存失败：' + e.message; }
 }
 async function deleteSkill(id) {
-  if (!confirm('确定删除这个技能吗？')) return;
+  if (!(await askConfirm('确定删除这个技能吗？', '删除', '取消'))) return;
   await fetch(API + '/skills/' + id, { method: 'DELETE' });
   await loadSkills();
 }
@@ -2495,6 +2761,10 @@ async function deleteSkill(id) {
 // ---------- ⑥ 手机返回键状态机 ----------
 /** 由 MainActivity.onKeyDown 通过 javascript: 调用：逐级关闭，聊天页才二次确认退出。 */
 function onHardwareBack() {
+  // v1.1.41 #2：居中通知弹窗是顶层临时态，返回键优先关掉它
+  if ($('notifyModal') && $('notifyModal').style.display === 'flex') { closeNotify(); return; }
+  // v1.1.39 #3：长按拖拽删除模式是顶层临时态，返回键优先结束它（停止抖动、收起垃圾桶，页面返回原样）
+  if (dragMode) { stopDragMode(); return; }
   // ⑪ 渠道表单是覆盖式浮层，返回键必须先收它
   if ($('msgEdit').style.display === 'flex') { $('msgEdit').style.display = 'none'; return; }
   if ($('msgMenu').style.display === 'block') { closeMsgMenu(); return; }
@@ -2513,8 +2783,15 @@ function onHardwareBack() {
   if (skillsPageEl.style.display === 'flex') { closeSkills(); return; }
   if (settingsPageEl.style.display === 'flex') { closeSettings(); return; }
   if (!sidebarEl.classList.contains('collapsed')) { sidebarEl.classList.add('collapsed'); return; }
-  if (window.AppBridge && window.AppBridge.exitApp) window.AppBridge.exitApp();
-  else if (confirm('确定退出小助手吗？')) window.close();
+  if (window.AppBridge && window.AppBridge.exitApp) window.AppBridge.exitApp();   // v1.1.42 #1：交原生→回调前端统一对话框(确定后 doExit)
+  else askConfirm('确定退出小助手吗？', '退出', '取消').then((ok) => { if (ok) window.close(); });   // 网页预览版走前端对话框
+}
+
+// v1.1.42 #1：原生 exitApp() 回调此函数，用前端统一对话框替代系统退出框，确认后调 doExit()。
+function helperExitConfirm() {
+  askConfirm('确定退出小助手吗？', '退出', '取消').then((ok) => {
+    if (ok && window.AppBridge && window.AppBridge.doExit) window.AppBridge.doExit();
+  });
 }
 
 // ---------- 事件绑定 ----------
@@ -2523,7 +2800,9 @@ fOkEl.addEventListener('click', saveAgent);
 fCancelEl.addEventListener('click', closeModal);
 toggleBtn.addEventListener('click', toggleSidebar);
 editAgentBtn.addEventListener('click', openEdit);
-delAgentBtn.addEventListener('click', deleteCurrent);
+delAgentBtn.addEventListener('click', deleteCurrentSession);   // v1.1.39 #2：顶栏删除键改删当前会话
+$('notifyOk').addEventListener('click', () => closeNotify(true));      // v1.1.42 #1：确定/我知道了 → resolve(true)
+if ($('notifyCancel')) $('notifyCancel').addEventListener('click', () => closeNotify(false));   // 取消 → resolve(false)
 clearChatBtn.addEventListener('click', clearChat);
 sendBtn.addEventListener('click', () => { if (busy) onSendCancel(); else send(); });
 inputEl.addEventListener('keydown', (e) => {
@@ -2589,7 +2868,7 @@ skillsBackBtn.addEventListener('click', closeSkills);
 $('addSkillBtn').addEventListener('click', () => openSkillForm(null));
 $('skCancelBtn').addEventListener('click', closeSkillForm);
 $('skSaveBtn').addEventListener('click', saveSkill);
-$('tabBtnModels').addEventListener('click', () => switchTab('Models'));
+$('tabBtnModels').addEventListener('click', () => switchTab('Models'));   // v1.1.43 #2：点底栏按钮=秒切，绝不带过渡动画(dir 只属于手势路径)
 $('tabBtnPersonal').addEventListener('click', () => switchTab('Personal'));
 $('tabBtnAbout').addEventListener('click', () => switchTab('About'));
 $('addChannelBtn').addEventListener('click', () => openChannelForm(null));
@@ -2722,7 +3001,7 @@ function renderPromptFlow(host, d) {
 }
 function openPromptPage(mode) {
   closePlusMenu();
-  $('promptPage').style.display = 'flex';
+  slideOpen($('promptPage'));
   $('promptTitle').textContent = mode === 'history' ? '提示词查看器（历史）' : '提示词查看器';
   $('promptClearBtn').style.display = mode === 'history' ? '' : 'none';
   const body = $('promptBody');
@@ -2765,10 +3044,10 @@ function openPromptPage(mode) {
     });
   }).catch(() => { body.innerHTML = '<div class="tip">读取失败：本地网关未响应</div>'; });
 }
-function closePromptPage() { $('promptPage').style.display = 'none'; }
+function closePromptPage() { slideClose($('promptPage')); }
 $('promptBackBtn').addEventListener('click', closePromptPage);
-$('promptClearBtn').addEventListener('click', () => {
-  if (!confirm('确定清空全部提示词留档吗？')) return;
+$('promptClearBtn').addEventListener('click', async () => {
+  if (!(await askConfirm('确定清空全部提示词留档吗？', '清空', '取消'))) return;
   fetch(API + '/prompt_log', { method: 'DELETE' }).then(() => openPromptPage('history'));
 });
 // ---------- v1.1.24 #1 结束 ----------
@@ -2805,6 +3084,145 @@ loadProviders();
 loadTools();
 // v1.1.24 #2：启动预载技能列表，避免首次 @/加号 弹出时显示「暂无技能」
 loadSkills();
+// ---------- v1.1.42 #5：左右滑「真跟手」平移导航（覆盖页整页 translateX 跟手，对齐列表↔对话体验） ----------
+// 对话层：右滑=列表抽屉跟手拉出(width)；左滑=设置页从右侧跟手推进来。
+// 列表层：左滑=抽屉跟手收回。
+// 覆盖页层(user/skills/tools/plugins/prompt)：右滑=本页跟手向右滑出露出下层(拉出列表)。
+// 设置层：中间三分区常驻物理并排在 #settingsTrack 上，左右滑=轨道1:1跟手平移、松手吸附切分区；边界(Models右滑/About左滑)=整页跟手滑出回对话。
+// 浮层/表单/拖拽模式一律不劫持。点底栏三按钮仍无动画秒切(switchTab不带dir)，本模块只额外提供左右滑跟手。
+const SIDEBAR_W = 168;
+const SWIPE_THRESHOLD = 46;   // 松手吸附阈值(px)
+function isPageVisible(el) { return el && el.style && (el.style.display === 'flex' || el.style.display === 'block'); }
+function topmostFloat() {
+  return (modalEl && modalEl.style.display === 'flex') || isPageVisible($('msgEdit')) ||
+    isPageVisible($('msgMenu')) || isPageVisible($('modelPicker')) || isPageVisible($('chForm')) ||
+    isPageVisible($('skForm')) || (channelPicker && channelPicker.style.display === 'block') ||
+    isPageVisible($('notifyModal'));
+}
+function swipeLayer() {
+  if (dragMode) return 'drag';
+  if (topmostFloat()) return 'float';
+  if (isPageVisible($('userPage'))) return 'user';
+  if (isPageVisible($('skillsPage'))) return 'skills';
+  if (isPageVisible($('toolsPage'))) return 'tools';
+  if (isPageVisible($('pluginsPage'))) return 'plugins';
+  if (isPageVisible($('promptPage'))) return 'prompt';
+  if (isPageVisible(settingsPageEl)) return 'settings';
+  if (sidebarEl && !sidebarEl.classList.contains('collapsed')) return 'list';
+  return 'chat';
+}
+// v1.1.45 #1：curSettingsTab() 已删除——分区定位统一走 settingsIdx()（读 .sec.on，与轨道位移同源）
+// 覆盖页 el 映射
+function layerEl(lay) {
+  return lay === 'user' ? $('userPage') : lay === 'skills' ? skillsPageEl : lay === 'tools' ? $('toolsPage')
+    : lay === 'plugins' ? $('pluginsPage') : lay === 'prompt' ? $('promptPage') : lay === 'settings' ? settingsPageEl : null;
+}
+// —— 跟手平移底层工具 ——
+function winW() { return (document.documentElement && document.documentElement.clientWidth) || (window.innerWidth) || 360; }
+function setX(el, x) { if (!el || !el.style) return; el.style.transition = 'none'; el.style.transform = 'translateX(' + x + 'px)'; }
+function settleX(el, x, done) {
+  if (!el || !el.style) { if (done) done(); return; }
+  el.style.transition = 'transform .24s ease'; el.style.transform = 'translateX(' + x + 'px)';
+  if (done) setTimeout(function () { el.style.transition = ''; if (done) done(); }, 250);
+}
+function clearX(el) { if (el && el.style) { el.style.transform = ''; el.style.transition = ''; } }
+// —— 列表抽屉跟手(width) ——
+function sidebarPreviewW(w) {
+  if (!sidebarEl || !sidebarEl.style) return;
+  sidebarEl.style.transition = 'none';
+  sidebarEl.classList.remove('collapsed');
+  sidebarEl.style.width = Math.max(0, Math.min(SIDEBAR_W, w)) + 'px';
+}
+function sidebarSetOpen(open) {
+  if (!sidebarEl || !sidebarEl.style) return;
+  sidebarEl.style.transition = '';
+  if (open) { sidebarEl.style.width = ''; sidebarEl.classList.remove('collapsed'); }
+  else { sidebarEl.classList.add('collapsed'); sidebarEl.style.width = ''; }
+}
+// —— 覆盖页跟手滑出回上层(列表) ——
+function dragPeekPage(el) { el.style.display = 'flex'; if (el.classList) el.classList.remove('slide-r'); setX(el, winW()); } // 进入预览前放右外
+function dragSettleOut(el, goOut) {   // 覆盖页：goOut=滑出关闭 / 否则滑回
+  if (goOut) { settleX(el, winW(), function () { el.style.display = 'none'; clearX(el); }); }
+  else settleX(el, 0, function () { clearX(el); });
+}
+// —— v1.1.45 #1：设置三分区改用"常驻物理并排轨道 #settingsTrack"（见 switchTab/trackPlace）。
+//    v1.1.44 那套"拖起时临时把三页拼成 flex 轨道"的方案已整体删除：它建在 overflow-y:auto 的
+//    容器上，会隐式开启横向滚动与 translateX 打架，且容器 padding 跟着平移 → 两页接缝漏白，
+//    观感正是用户反馈的"两个页面是分开的、只是加了过渡动画"。
+
+let swStartX = 0, swStartY = 0, swActive = false, swLayer = '', swEl = null, swKind = '', swBasePx = 0;
+document.addEventListener('touchstart', (ev) => {
+  const t = ev.touches && ev.touches[0]; if (!t) return;
+  swStartX = t.clientX; swStartY = t.clientY; swActive = false; swLayer = swipeLayer();
+  swEl = layerEl(swLayer); swKind = '';
+  // v1.1.45 #1：记录拖起时轨道基准位移，之后按 1:1 增量跟手（无需临时拼布局，页面本来就物理并排）
+  swBasePx = (swLayer === 'settings') ? (-settingsIdx() * settingsW()) : 0;
+}, { passive: true });
+document.addEventListener('touchmove', (ev) => {
+  const t = ev.touches && ev.touches[0]; if (!t) return;
+  const dx = t.clientX - swStartX, dy = t.clientY - swStartY;
+  if (!swActive) {
+    if (swLayer === 'float' || swLayer === 'drag') return;
+    if (Math.abs(dx) > Math.abs(dy) * 1.3 && Math.abs(dx) > 14) swActive = true; else return;
+  }
+  const W = winW();
+  if (swLayer === 'chat') {
+    if (dx > 0) { swKind = 'list'; sidebarPreviewW(dx); }                       // 右滑拉列表(width)
+    else { if (swKind !== 'setIn') { swKind = 'setIn'; dragPeekPage(settingsPageEl); } setX(settingsPageEl, Math.max(0, W + dx)); } // 左滑设置推进来
+  } else if (swLayer === 'list') {
+    swKind = 'list'; sidebarPreviewW(SIDEBAR_W + dx);                           // 左滑收列表
+  } else if (swLayer === 'settings') {
+    const idx = settingsIdx(), TW = settingsW(), N = SETTINGS_TABS.length;
+    let tgt = -1;
+    if (dx < 0 && idx < N - 1) tgt = idx + 1;   // 左滑→下一分区
+    else if (dx > 0 && idx > 0) tgt = idx - 1;   // 右滑→上一分区
+    if (tgt >= 0) {
+      // v1.1.45 #1：轨道本就物理并排，位移 = 基准 + 手指增量，1:1 跟手，两页永远首尾相接
+      swKind = 'tab';
+      // 单次拖拽最多跨一格：夹在 [basePx-TW, basePx+TW] 且不出首尾格
+      const lo = Math.max(-(N - 1) * TW, swBasePx - TW), hi = Math.min(0, swBasePx + TW);
+      trackPlace(Math.max(lo, Math.min(hi, swBasePx + dx)), false);
+    } else {
+      swKind = 'pageOut';
+      trackPlace(swBasePx, false);   // 保证轨道归位（避免半途改向留下的偏移）
+      setX(settingsPageEl, dx > 0 ? Math.max(0, dx) : Math.max(-W, dx));   // 边界：整页跟手滑出
+    }
+  } else if (swEl) { // 覆盖页右滑整页跟手滑出
+    swKind = 'pageOut'; setX(swEl, Math.max(0, dx));
+  }
+  if (ev.preventDefault) ev.preventDefault();
+}, { passive: false });
+const swipeEnd = (ev) => {
+  if (!swActive) return;
+  const t = (ev.changedTouches && ev.changedTouches[0]) || null;
+  const dx = (t ? t.clientX : swStartX) - swStartX;
+  const lay = swLayer, kind = swKind, el = swEl; swActive = false;
+  const TH = SWIPE_THRESHOLD;
+  if (lay === 'chat') {
+    if (kind === 'list') { if (dx >= TH) sidebarSetOpen(true); else sidebarSetOpen(false); }
+    else if (kind === 'setIn') { if (dx <= -TH) settleX(settingsPageEl, 0, function () { clearX(settingsPageEl); loadSettingsData(); }); else settleX(settingsPageEl, winW(), function () { settingsPageEl.style.display = 'none'; clearX(settingsPageEl); }); }
+    else sidebarSetOpen(false);
+  } else if (lay === 'list') {
+    if (dx <= -TH) sidebarSetOpen(false); else sidebarSetOpen(true);
+  } else if (lay === 'settings') {
+    if (kind === 'tab') {   // v1.1.45 #1：松手吸附——过阈值进邻格，否则弹回本格；两页始终物理相连，无收口竞态
+      const idx = settingsIdx(), TW = settingsW();
+      let ni = idx;
+      if (dx <= -TH && idx < SETTINGS_TABS.length - 1) ni = idx + 1;
+      else if (dx >= TH && idx > 0) ni = idx - 1;
+      switchTab(SETTINGS_TABS[ni], true);   // 吸附(带 .22s ease)；ni===idx 时即"弹回本格"
+    } else if (kind === 'pageOut') {   // 边界整页退出：滑到位关闭回对话
+      // v1.1.43 #1：修复 bug——退出设置不再 sidebarSetOpen(true)（此前会自动展开智能体列表）
+      if ((dx >= TH) || (dx <= -TH)) settleX(settingsPageEl, dx >= TH ? winW() : -winW(), function () { settingsPageEl.style.display = 'none'; clearX(settingsPageEl); });
+      else settleX(settingsPageEl, 0, function () { clearX(settingsPageEl); });
+    }
+  } else if (el) { // 覆盖页退出回上层
+    if (kind === 'pageOut' && dx >= TH) dragSettleOut(el, true), sidebarSetOpen(true);
+    else dragSettleOut(el, false);
+  }
+};
+document.addEventListener('touchend', swipeEnd, { passive: true });
+document.addEventListener('touchcancel', swipeEnd, { passive: true });
 </script>
 </body>
 </html>
