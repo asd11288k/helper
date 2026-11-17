@@ -43,6 +43,7 @@ public class MainActivity extends Activity {
     private static final int REQ_IMAGE = 1001;
     private static final int REQ_FILE = 1002;
     private String pendingFileCallback = "";   // JS 回调函数名
+    private volatile int lastBarColor = 0xFFFFFFFF;   // v1.1.42 #1：缓存当前系统栏色，供对话框压暗/还原
 
     /** 系统栏配色：v1.1.32 #1 改为跟随顶栏填充色（不再硬编码白/灰）。
      *  fillColor 为空时回落旧逻辑：深色 #1f2329、浅色白。图标明暗按填充色亮度自动反转。 */
@@ -60,6 +61,7 @@ public class MainActivity extends Activity {
                 catch (Exception e) { bar = dark ? Color.parseColor("#1f2329") : Color.WHITE; }
                 w.setStatusBarColor(bar);
                 w.setNavigationBarColor(bar);
+                MainActivity.this.lastBarColor = bar;   // v1.1.42 #1：记录基准色供 setStatusbarDim 还原
                 // 状态栏图标用深色当且仅当填充足够亮（浅色主题的亮黄/亮绿等）
                 boolean lightIcons = dark; // 深色黑底 → 浅色图标
                 if (fillColor != null && !fillColor.isEmpty()) {
@@ -83,11 +85,56 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void setBars(final String theme, final String fillColor) { applyTheme(theme, fillColor); }
 
-        /** 聊天页按返回键时由前端状态机调用；原生弹二次确认，确认才真正退出。 */
+        /** v1.1.39 #3：长按震动反馈（拖拽删除/长按消息菜单共用）。ms 为震动时长。
+ *  注：targetSdk=23 编译，android-23 jar 无 VibrationEffect(API26+)，故用旧版 vibrate(long)，全版本兼容。 */
+        @JavascriptInterface
+        public void vibrate(final long ms) {
+            try {
+                android.os.Vibrator v = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
+                if (v != null) v.vibrate(ms > 0 ? ms : 15);
+            } catch (Throwable ignore) { /* 无震动硬件时静默 */ }
+        }
+
+        /** 聊天页按返回键时由前端状态机调用。v1.1.42 #1：不再弹系统框，改为回调前端统一对话框 helperExitConfirm()，确认后再 doExit()。 */
         @JavascriptInterface
         public void exitApp() {
             runOnUiThread(new Runnable() {
-                public void run() { confirmExit(); }
+                public void run() {
+                    try { web.evaluateJavascript("if(window.helperExitConfirm)helperExitConfirm();", null); }
+                    catch (Exception e) { finish(); }
+                }
+            });
+        }
+
+        /** v1.1.42 #1：前端统一对话框确认后真正退出。 */
+        @JavascriptInterface
+        public void doExit() {
+            runOnUiThread(new Runnable() { public void run() { finish(); } });
+        }
+
+        /** v1.1.42 #1 方案C：对话框弹出时把系统状态栏压暗，关闭时还原为基准色（图标明暗按亮度自动反转）。 */
+        @JavascriptInterface
+        public void setStatusbarDim(final boolean on) {
+            if (Build.VERSION.SDK_INT < 21) return;
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    Window w = getWindow();
+                    int base = MainActivity.this.lastBarColor;
+                    int target = on ? Color.rgb(
+                            (int) (Color.red(base) * 0.55),
+                            (int) (Color.green(base) * 0.55),
+                            (int) (Color.blue(base) * 0.55)) : base;
+                    w.setStatusBarColor(target);
+                    w.setNavigationBarColor(target);
+                    double lum = 0.299 * Color.red(target) + 0.587 * Color.green(target) + 0.114 * Color.blue(target);
+                    boolean lightIcons = lum < 150;
+                    int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
+                    if (!lightIcons) {
+                        if (Build.VERSION.SDK_INT >= 23) flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                        if (Build.VERSION.SDK_INT >= 26) flags |= 0x10;
+                    }
+                    w.getDecorView().setSystemUiVisibility(flags);
+                }
             });
         }
 
@@ -122,17 +169,8 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void confirmExit() {
-        new AlertDialog.Builder(MainActivity.this)
-                .setMessage("确定退出小助手吗？")
-                .setPositiveButton("退出", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface d, int which) { finish(); }
-                })
-                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface d, int which) { d.dismiss(); }
-                })
-                .show();
-    }
+    // v1.1.42 #1：原生 confirmExit() 系统退出框已删除——退出改走前端统一对话框
+    // (exitApp→helperExitConfirm→askConfirm→doExit)。AlertDialog/DialogInterface import 仍由 onJsConfirm 兜底使用。
 
     /** 选择结果回传：图片按视觉载荷压缩；文本按 UTF-8 解码；二进制不再当文本乱码。 */
     @Override
