@@ -6,7 +6,7 @@
 #   openjdk-17-jdk-headless（javac / keytool）
 # JVM 单测另需 libs/json.jar（构建 APK 本身不需要，Android 平台自带 org.json）
 #
-# 用法：bash build.sh   → 产物 dist/豆包问答.apk
+# 用法：bash build.sh   → 产物 dist/helper.apk
 set -u
 cd "$(dirname "$0")" || exit 1
 
