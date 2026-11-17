@@ -14,8 +14,8 @@ chk "前端含 /channels 探测" "grep -q \"fetch(API + '/channels'\" ../index.h
 chk "MainActivity 不调用旧写死上游的 Core.chat" "! grep -q 'Core.chat' src/com/helper/app/MainActivity.java"
 # --- v1.0.0 既有需求 ---
 chk "App 名为小助手" "grep -q '<string name=\"app_name\">小助手</string>' res/values/strings.xml"
-chk "版本号 1.1.23" "grep -q 'android:versionName=\"1.1.23\"' AndroidManifest.xml"
-chk "versionCode 递增到 16" "grep -q 'android:versionCode=\"16\"' AndroidManifest.xml"
+chk "版本号 1.1.38" "grep -q 'android:versionName=\"1.1.38\"' AndroidManifest.xml"
+chk "versionCode 递增到 30" "grep -q 'android:versionCode=\"31\"' AndroidManifest.xml"
 chk "④ 启动图标为附件原图重生成" "grep -q 'ic_launcher' AndroidManifest.xml && ls res/mipmap-xxxhdpi/ic_launcher.png >/dev/null 2>&1"
 chk "⑫ 全局提示词注入上游" "grep -q 'globalGuide' src/com/helper/app/LocalGateway.java"
 chk "⑫ 提供商注册表" "grep -q 'Deepseek' src/com/helper/app/Providers.java && grep -q 'anthropic' src/com/helper/app/Providers.java"
@@ -94,7 +94,7 @@ chk "③ 只发图片请查看图片" "grep -q '请查看图片' ../index.html"
 chk "④ 发送键变取消" "grep -q 'onSendCancel' ../index.html"
 chk "⑤ 接收中再思考中" "grep -q '接收中' ../index.html && grep -q 'startThinkingTimer' ../index.html"
 chk "⑥ 个性化开关（v1.1.15：假流式/显示工具调用/回复时间）" "grep -q '假流式输出' ../index.html && grep -q '显示工具调用' ../index.html && grep -q 'timingSwitch' ../index.html && ! grep -q 'id=\"tokensSwitch\"' ../index.html && ! grep -q 'id=\"thinkSwitch\"' ../index.html && ! grep -q 'id=\"reasoningParamSwitch\"' ../index.html"
-chk "⑥ 回复时间标注（无 0.0 秒）" "grep -q 'buildReplyMeta' ../index.html && ! grep -q '生成 0.0' ../index.html"
+chk "⑥ 回复时间标注（无 0.0 秒）" "grep -q 'fmtReplyMeta' ../index.html && ! grep -q '生成 0.0' ../index.html"
 chk "⑦ 关于页简单对话助手" "grep -q '简单对话助手' ../index.html"
 chk "⑧ 会话编号防重" "grep -q 'System.currentTimeMillis() + \"_\"' src/com/helper/app/Store.java"
 chk "⑨ 渠道表单浮层" "grep -q 'position: fixed' ../index.html"
@@ -144,7 +144,7 @@ chk "⑱ 插件弹列表不跳页" "grep -q 'kind === .插件. ? .插件.' ../in
 chk "⑲ 加号列表空白收起" "grep -q 'plusOutsideListener' ../index.html"
 chk "⑳ 操作手册含索引/工程师技能" "grep -q '工程师技能调用信息' src/com/helper/app/LocalGateway.java && grep -q '软件使用说明' src/com/helper/app/LocalGateway.java && grep -q '底层代码实现' src/com/helper/app/LocalGateway.java"
 chk "⑳ 绝对禁止瞎编红线" "grep -q '绝对禁止瞎编' src/com/helper/app/LocalGateway.java"
-chk "版本 16 / 1.1.23" "grep -q 'android:versionCode=\"16\"' AndroidManifest.xml && grep -q 'android:versionName=\"1.1.23\"' AndroidManifest.xml"
+chk "版本 30 / 1.1.38" "grep -q 'android:versionCode=\"31\"' AndroidManifest.xml && grep -q 'android:versionName=\"1.1.38\"' AndroidManifest.xml"
 
 # --- v1.1.15 本轮新增契约（静态） ---
 chk "① 气泡右上角 ✕ 已删（删除统一走长按）" "! grep -q \"del.className = 'msg-del'\" ../index.html"
@@ -159,7 +159,7 @@ chk "⑤ 分割线在渠道标题之上" "grep -q \"className = 'pk-sep'\" ../in
 chk "⑤ 后端 /chat 按新键决定是否传参" "grep -q 'prefsBoolean(\"reasoningParamOn\", false)' src/com/helper/app/LocalGateway.java"
 chk "⑦ 空技能也弹提示" "grep -q \"'暂无' + atScope\" ../index.html"
 chk "⑦ 新建技能覆盖式弹层" "grep -q '#skForm .*position: fixed\|#skForm { display: none; position: fixed' ../index.html || grep -q 'position: fixed; inset: 0; z-index: 80' ../index.html"
-chk "⑧ 用户按钮复用技能同款样式" "grep -q '#skillBtn, #userBtn' ../index.html"
+chk "⑧ 用户按钮复用技能同款样式（v1.1.24 #3 四按钮统一规则）" "grep -q '#userBtn, #skillBtn, #toolBtn, #pluginBtn' ../index.html"
 chk "⑧ 用户页改「关于用户的设定」且删占位符" "grep -q '关于用户的设定' ../index.html && ! grep -q '例如：叫我子兮' ../index.html"
 chk "V1115Test 后端契约测试存在" "ls tests/V1115Test.java >/dev/null 2>&1"
 
@@ -175,7 +175,7 @@ chk "V1116Test 后端契约测试存在" "ls tests/V1116Test.java >/dev/null 2>&
 
 # --- v1.1.19 本轮契约（技能表单 flex:1 覆盖卡片，替代 1.1.18 内联卡片） ---
 chk "#1 技能表单 flex:1 覆盖卡片（非 fixed，自带滚动）" "grep -q '#skForm { display: none; flex: 1; overflow-y: auto' ../index.html && ! grep -q '#skForm .*position: fixed' ../index.html && ! grep -q '#skForm .card { max-width' ../index.html"
-chk "#1 skForm 在 skillsBody 之后、skillsPage 内（顶栏露出不被遮）" "grep -q 'v1.1.19 #1' ../index.html && grep -q \"\\$('skillsBody').style.display = 'none'\" ../index.html"
+chk "#1 skForm 在 skillsBody 之后、skillsPage 内（顶栏露出不被遮）" "grep -q 'v1.1.19 #1' ../index.html && grep -qF \"skillsBody').style.display = 'none'\" ../index.html"
 chk "#2 渠道表单恢复原单卡片浮层（class=card id=chForm）" "grep -q 'class=\"card\" id=\"chForm\"' ../index.html"
 chk "#2 chForm 搬至 body 级（在 settingsPage 之后）以消除露缝" "grep -q '移到 body 级' ../index.html"
 chk "#2 modelPicker浮层层级高于表单层" "grep -q 'z-index: 85' ../index.html"
@@ -221,20 +221,20 @@ chk "#2 网关四处重名拦截返回 409" "grep -c 'return err(409, \"name exi
 chk "#3 上游剥离零宽 stripZeroWidth + cleanHistForUpstream" "grep -q 'static String stripZeroWidth' src/com/helper/app/LocalGateway.java && grep -q 'upPrompt = stripZeroWidth(prompt);' src/com/helper/app/LocalGateway.java && grep -q 'cleanHistForUpstream(hist0);' src/com/helper/app/LocalGateway.java"
 chk "#3 guide 明确禁止反问未识别技能名" "grep -q '未识别到技能名' src/com/helper/app/LocalGateway.java"
 # #4 加号按钮：默认灰框、仅展开列表时 .on 亮蓝（与渠道按钮同款交互）
-chk "#4 plusBtn 默认 line 灰框 + .on 展开亮蓝" "grep -q 'border: 1px solid var(--line);   /\* v1.1.22 #2' ../index.html && grep -q '#plusBtn.on { border-color: var(--accent); color: var(--accent); }' ../index.html"
+chk "#4 plusBtn 默认 line 灰框 + .on 展开亮蓝" "grep -q '#plusBtn { .*border: 1px solid var(--line)' ../index.html && grep -q '#plusBtn.on { border-color: var(--accent); color: var(--accent); }' ../index.html"
 # #5 重开渠道恢复上次全部已保存模型的高亮
 chk "#5 openChannelForm 从 c.models 恢复勾选" "grep -q 'v1.1.21 #5：重新进入渠道表单时' ../index.html && grep -q 'Array.isArray(c.models)' ../index.html"
 # 版本对齐
-chk "版本 16 / 1.1.23 (aboutVersion)" "grep -q 'id=\"aboutVersion\">1.1.23<' ../index.html"
+chk "版本 30 / 1.1.38 (aboutVersion)" "grep -q 'id=\"aboutVersion\">1.1.38<' ../index.html"
 
 # --- v1.1.22 本轮契约（5 项需求） ---
 # #1 输入框错位（见上方 v1.1.22 块，textarea/mirror 无边框、边框归 wrap）
 # #2 加号按钮展开才亮蓝（见上方 #4 plusBtn .on 契约）
-chk "#2 openPlusMenu 展开置 .on、closePlusMenu 清除" "grep -q \"\$('plusBtn').className = 'on';\" ../index.html && grep -q \"\$('plusBtn').className = '';\" ../index.html"
+chk "#2 openPlusMenu 展开置 .on、closePlusMenu 清除" "grep -qF \"plusBtn').className = 'on';\" ../index.html && grep -qF \"plusBtn').className = '';\" ../index.html"
 # #3 智能体重名提示改为表单下方（复用技能同款，去掉 alert）
 chk "#3 智能体重名表单下方提示 agFormTip" "grep -q 'id=\"agFormTip\"' ../index.html && grep -q \"智能体名已存在，请换一个名字\" ../index.html && ! grep -q '该智能体名称已存在，请换一个名字' ../index.html"
 # #4 技能注入加引导包装，杜绝「未收到技能提示词/找不到技能」
-chk "#4 网关注入【用户已指定技能】引导包装（callUpstream+routeChat 两处）" "[ \$(grep -c '用户已指定技能】用户在本条消息中选定了一个技能' src/com/helper/app/LocalGateway.java) -ge 2 ]"
+chk "#4 网关注入【用户已指定技能】引导包装（v1.1.25 收口为唯一 SKILL_LEAD，真实发送+预览+留档共用一份）" "[ \$(grep -c '用户已指定技能】用户在本条消息中选定了一个技能' src/com/helper/app/LocalGateway.java) -ge 1 ] && [ \$(grep -c 'append(SKILL_LEAD)' src/com/helper/app/LocalGateway.java) -ge 1 ] && [ \$(grep -c 'globalGuide() + constantHints()' src/com/helper/app/LocalGateway.java) -eq 0 ]"
 chk "#4 guide 第1条指向【用户已指定技能】段落、不再让模型自识别 @" "grep -q '当本系统提示词下方出现【用户已指定技能】段落时' src/com/helper/app/LocalGateway.java"
 # #5 用户设定显式开/关态注入（关闭时不暴露内容、要求不猜、如实说不知道）
 chk "#5 用户设定·开启 注入" "grep -q '【用户设定·开启】' src/com/helper/app/LocalGateway.java"
