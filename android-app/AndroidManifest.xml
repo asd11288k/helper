@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.helper.app" android:versionCode="31" android:versionName="1.1.38">
+    package="com.helper.app" android:versionCode="38" android:versionName="1.1.45">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="23" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <application android:label="@string/app_name" android:theme="@style/AppTheme"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false" android:usesCleartextTraffic="true">
