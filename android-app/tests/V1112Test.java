@@ -237,8 +237,8 @@ public class V1112Test {
         ok("/clear 带 sessionId 正常",
                 http(v + "/agents/" + aid + "/clear", "POST", "{\"sessionId\":\"" + s1 + "\"}")
                         .startsWith("200|"));
-        ok("/about 版本 1.1.23",
-                body(http(v + "/about", "GET", null)).contains("\"version\":\"1.1.23\""));
+        ok("/about 版本 1.1.27",
+                body(http(v + "/about", "GET", null)).contains("\"version\":\"1.1.38\""));
 
         gw.stop();
         cf.delete(); sf.delete(); af.delete(); skf.delete(); prefsFile.delete();
