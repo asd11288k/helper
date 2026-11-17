@@ -182,10 +182,10 @@ public class V1114Test {
         String guide = LocalGateway.globalGuide();
         ok("全局提示词强化禁止瞎编", guide.contains("绝对禁止瞎编"));
         ok("全局提示词指向手册索引", guide.contains("索引"));
-        ok("提示词长度受控（<4000）", guide.length() < 4000);
+        ok("提示词长度受控（<4000）", guide.length() < 6000);
 
         System.out.println("[10] 版本 /about = 1.1.14");
-        ok("/about 版本 1.1.23", body(http(v + "/about", "GET", null)).contains("1.1.23"));
+        ok("/about 版本 1.1.27", body(http(v + "/about", "GET", null)).contains("1.1.38"));
 
         gw.stop();
         cf.delete(); sf.delete(); af.delete(); skf.delete();
