@@ -11,12 +11,32 @@ const script = HTML.match(/<script>([\s\S]*?)<\/script>/)[1];
 class El {
   constructor(id) {
     this.id = id; this.children = []; this.listeners = {};
-    this.style = {}; this._value = ''; this._text = null;
+    const st = {}; st.setProperty = (k, v) => { st[k] = v; };
+    this.style = st; this._value = ''; this._text = null;
     this.className = ''; this._innerHTML = ''; this.disabled = false;
     this.scrollTop = 0; this.scrollHeight = 0; this.focusCalls = 0;
     this._parent = null; this.title = '';
   }
   appendChild(c) { this.children.push(c); c._parent = this; return c; }
+  // v1.1.25 #3：桩无真实 DOM 解析。innerHTML 赋值后用 firstChild 取「合成首子节点」，
+  // className 取自 innerHTML 中第一个 class="..."，全文保留供 textAll 断言。
+  get firstChild() {
+    if (this.children.length) return this.children[0];
+    if (!this._innerHTML) return null;
+    const m = this._innerHTML.match(/class="([^"]+)"/);
+    const synth = new El((this.id || 'el') + ':first');
+    if (m) synth.className = m[1];
+    synth._innerHTML = this._innerHTML;
+    synth._parent = this;
+    this.children.push(synth);
+    return synth;
+  }
+  /** v1.1.25 #3：递归收集本节点与全部子孙的 innerHTML/text，供内容断言。 */
+  textAll() {
+    let t = (this._innerHTML || '') + (this._text === null ? '' : this._text);
+    this.children.forEach(c => { if (c && c.textAll) t += c.textAll(); });
+    return t;
+  }
   removeChild(c) { this.children = this.children.filter(x => x !== c); }
   remove() { if (this._parent) this._parent.children = this._parent.children.filter(x => x !== this); }
   contains(n) {
@@ -38,7 +58,16 @@ class El {
   querySelector(sel) {
     if (sel.startsWith('.')) {
       const cls = sel.slice(1);
-      return this.children.find(c => (c.className || '').split(' ').includes(cls)) || null;
+      const hit = this.children.find(c => (c.className || '').split(' ').includes(cls));
+      if (hit) return hit;
+      // v1.1.24 #1：桩不支持 innerHTML 解析；若 innerHTML 里确有该 class，
+      // 合成一个同名子节点，使「由 innerHTML 构建 + querySelector 绑定事件」的前端写法可测。
+      if (this._innerHTML && this._innerHTML.includes('class="' + cls + '"')) {
+        const synth = new El((this.id || 'el') + ':' + cls);
+        synth.className = cls; synth._parent = this; this.children.push(synth);
+        return synth;
+      }
+      return null;
     }
     const m = sel.match(/\[data-models-for="([^"]+)"\]/);
     if (m) return this.children.find(c => (c.attrs || {})['data-models-for'] === m[1]) || null;
@@ -68,7 +97,7 @@ class El {
 }
 
 const ids = [
-  'chat', 'input', 'send', 'status', 'sidebar', 'agentList', 'newAgentBtn', 'toggleBtn',
+  'chat', 'row', 'input', 'send', 'status', 'sidebar', 'agentList', 'newAgentBtn', 'toggleBtn',
   'main', 'empty', 'chatPanel', 'chatHeader', 'agentName', 'agentSetting',
   'delAgentBtn', 'editAgentBtn', 'clearChatBtn', 'modal', 'modalTitle',
   'fName', 'fSetting', 'fOk', 'fCancel', 'agFormTip', 'modelSub', 'settingsBtn',
@@ -96,6 +125,15 @@ const ids = [
   'userSetting', 'userProfileSwitch', 'userSaveBtn', 'userHint',
   'msgMenu', 'mmCopy', 'mmEdit', 'mmDel', 'msgEdit', 'meText', 'meCancel', 'meSave',
   'effortRow',
+  // v1.1.24 #1 新增：测试模式三级开关 + 提示词查看器页
+  'devSection', 'devModeSwitch', 'devRowPromptViewer', 'devPromptViewerSwitch',
+  'devRowPromptHistory', 'devPromptHistorySwitch',
+  'pmPrompt', 'pmPromptHist',
+  'promptPage', 'promptBar', 'promptBackBtn', 'promptTitle', 'promptClearBtn', 'promptBody',
+  // v1.1.27 #4 新增：测试模式修改系统提示词页
+  'promptOverridePage', 'promptOverrideBar', 'poBackBtn', 'promptOverrideBody',
+  'poGuide', 'poManual', 'poResetBtn', 'poSaveBtn', 'poHint',
+  'devRowPromptOverride', 'devPromptOverrideBtn',
 ];
 const elements = {};
 ids.forEach(id => { elements[id] = new El(id); });
@@ -130,10 +168,17 @@ let nextChId = 1, nextSkId = 1;
 let prefs = { theme: 'light', lastChannelId: '', lastModel: '', stream: true, agentLoop: true,
   showThink: true, showTiming: true, showTokens: false,
   reasoningEffort: 'high', reasoningParam: true, reasoningParamOn: false,
-  showToolCalls: false, userProfileOn: true };
+  showToolCalls: false, userProfileOn: true,
+  // v1.1.24 #1：测试模式三级开关，默认全关
+  testMode: false, promptViewerOn: false, promptHistoryOn: false };
+let promptLog = [];
+let skillsFetchCount = 0;
+let promptLogGetCount = 0;
+let prefsPuts = [];
 let profile = { content: '', enabled: true };
+let promptOverride = { guide: '', manual: '', overridden: false };
 let skills = [];
-const about = { version: '1.1.23', author: '子兮', projectUrl: 'https://github.com/asd11288k/helper' };
+const about = { version: '1.1.38', author: '子兮', projectUrl: 'https://github.com/asd11288k/helper' };
 let settingsMode = 'app';   // 'web' 模拟网页预览版无 /channels 路由（App 独有）
 let lastChatBody = null, lastPrefsPut = null, lastProbeBody = null, lastChannelPut = null;
 let lastBarTheme = null, exitCalls = 0, choicePrefsPut = null;
@@ -154,6 +199,20 @@ function mockFetch(url, opts) {
     if (Object.prototype.hasOwnProperty.call(body, 'enabled')) profile.enabled = body.enabled;
     return ok(Object.assign({}, profile));
   }
+  // v1.1.27 #4：测试模式修改系统提示词（全局指南 / 操作手册）
+  if (url.endsWith('/prompt_override')) {
+    if (method === 'PUT') {
+      if (Object.prototype.hasOwnProperty.call(body, 'guide')) promptOverride.guide = body.guide;
+      if (Object.prototype.hasOwnProperty.call(body, 'manual')) promptOverride.manual = body.manual;
+      promptOverride.overridden = true;
+      return ok(Object.assign({}, promptOverride));
+    }
+    if (method === 'DELETE') {
+      promptOverride = { guide: '', manual: '', overridden: false };
+      return ok({ guide: '默认指南', manual: '默认手册', overridden: false });
+    }
+    return ok(Object.assign({ defaultGuide: '默认指南', defaultManual: '默认手册' }, promptOverride));
+  }
   if (url.endsWith('/interrupt')) {
     const a = agents.find(x => x.id === url.split('/')[2]);
     if (a) a.messages.push({ role: 'assistant', content: '（系统记录：用户取消了本轮生成）' });
@@ -169,6 +228,7 @@ function mockFetch(url, opts) {
   if (url.endsWith('/prefs')) {
     if (method === 'GET') return ok(Object.assign({}, prefs));
     lastPrefsPut = body;
+    prefsPuts.push(body);
     if (Object.prototype.hasOwnProperty.call(body, 'lastChannelId')) choicePrefsPut = body;
     if (body.theme) prefs.theme = body.theme;
     if (Object.prototype.hasOwnProperty.call(body, 'stream')) prefs.stream = body.stream;
@@ -178,10 +238,39 @@ function mockFetch(url, opts) {
     if (Object.prototype.hasOwnProperty.call(body, 'showTokens')) prefs.showTokens = body.showTokens;
     if (Object.prototype.hasOwnProperty.call(body, 'lastChannelId')) prefs.lastChannelId = body.lastChannelId;
     if (Object.prototype.hasOwnProperty.call(body, 'lastModel')) prefs.lastModel = body.lastModel;
-    ['reasoningEffort', 'reasoningParam', 'reasoningParamOn', 'showToolCalls', 'userProfileOn'].forEach(k => {
+    ['reasoningEffort', 'reasoningParam', 'reasoningParamOn', 'showToolCalls', 'userProfileOn',
+      'testMode', 'promptViewerOn', 'promptHistoryOn'].forEach(k => {
       if (Object.prototype.hasOwnProperty.call(body, k)) prefs[k] = body[k];
     });
     return ok(Object.assign({}, prefs));
+  }
+  // ---------- v1.1.24 #1：提示词查看器后端 mock ----------
+  if (url.endsWith('/prompt_preview') && method === 'POST') {
+    return ok({
+      ok: true,
+      system: '指南示例\n\n【小助手 App 操作手册 v1.1.26】\n\n角色设定示例\n\n【当前模型思考等级】high',
+      segments: [
+        { title: '全局指南', text: '指南示例' },
+        { title: '操作手册', text: '【小助手 App 操作手册 v1.1.26】' },
+        { title: '智能体设定', text: '角色设定示例' },
+        { title: '用户设定', text: '【用户设定·开启】用户背景' },
+        { title: '思考等级', text: '【当前模型思考等级】high', effort: 'high', paramOn: false },
+      ],
+      messages: [
+        { role: 'system', content: '指南示例 手册 角色设定 思考等级', shell: true },
+        { role: 'user', content: '上一问' },
+        { role: 'assistant', content: '上一答' },
+        { role: 'user', content: '（虚拟请求：仅用于预览提示词，不会发送给模型）' },
+      ],
+      protocol: 'openai', setting: body.setting || '',
+    });
+  }
+  if (url.endsWith('/prompt_log')) {
+    if (method === 'DELETE') { promptLog = []; return ok({ ok: true, cleared: true }); }
+    promptLogGetCount++;
+    // 与后端 /prompt_log 一致：items 按时间旧→新（最新在末尾），前端自行反转成最新在前
+    return ok({ ok: true, count: promptLog.length, items: promptLog.slice(),
+      enabled: prefs.promptHistoryOn === true });
   }
   const sessMatch = url.match(/\/agents\/([^/]+)\/sessions$/);
   if (sessMatch && method === 'GET') {
@@ -213,7 +302,7 @@ function mockFetch(url, opts) {
     { id: 'search_web', name: '搜索网页', desc: '搜互联网' },
     { id: 'write_file', name: '写文件', desc: '写文本文件' },
   ] });
-  if (url.endsWith('/skills') && method === 'GET') return ok({ skills: skills });
+  if (url.endsWith('/skills') && method === 'GET') { skillsFetchCount++; return ok({ skills: skills }); }
   if (url.endsWith('/skills') && method === 'POST') {
     if (!body.name || !body.prompt) return notOk({ error: 'name/prompt required' });
     const s = { id: 'sk' + nextSkId++, name: body.name, note: body.note, prompt: body.prompt };
@@ -594,7 +683,7 @@ function findItemByText(container, text) {
   await sleep(20);
   assert(elements.aboutUrl.textContent === 'https://github.com/asd11288k/helper', '项目地址');
   assert(elements.aboutAuthor.textContent === '子兮', '作者为子兮');
-  assert(elements.aboutVersion.textContent === '1.1.23', '版本号为 1.1.23');
+  assert(elements.aboutVersion.textContent === '1.1.38', '版本号为 1.1.38');
 
   console.log('\n[18] 设置页可返回聊天');
   elements.settingsBackBtn.dispatch('click', {});
@@ -782,13 +871,13 @@ function findItemByText(container, text) {
   ['streamSwitch', 'loopSwitch', 'timingSwitch'].forEach(id => {
     assert(HTML.includes('id="' + id + '"'), '个性化开关 ' + id);
   });
-  assert(script.includes('buildReplyMeta') && script.includes('耗时 '), '回复时间标注（不再写 0.0 秒）');
+  assert(script.includes('fmtReplyMeta') && script.includes('耗时 '), '回复时间标注（不再写 0.0 秒）');
   assert(!HTML.includes('id="tokensSwitch"') && !script.includes('tokensMode'),
     '#8 tokens 上下文功能已删除');
   assert(script.includes('splitThink') && script.includes('showThinkMode'), '显示思考过程开关');
   // ⑦ 关于页副标题
   assert(HTML.includes('简单对话助手'), '关于页副标题改为简单对话助手');
-  assert(HTML.includes('id="aboutVersion">1.1.23<'), '关于页版本 1.1.23');
+  assert(HTML.includes('id="aboutVersion">1.1.38<'), '关于页版本 1.1.38');
   // ⑩ 模型名逗号相连，支持手动改
   assert(script.includes("modelsToText") && script.includes("join(',')") && script.includes("textToModels"),
     '多模型用英文逗号相连且可手动修改');
@@ -952,7 +1041,7 @@ function findItemByText(container, text) {
   assert(elements.plusMenu.style.display === 'none', '#19 点输入框收起加号列表');
   assert((document._docListeners['click'] || []).length < beforePlus, '#19 收起后监听被清理');
   // #20 操作手册索引与证据红线（后端由 V1114Test 覆盖，这里确认前端版本）
-  assert(HTML.includes('id="aboutVersion">1.1.23<'), '#20 / 版本对齐 1.1.23');
+  assert(HTML.includes('id="aboutVersion">1.1.38<'), '#20 / 版本对齐 1.1.38');
 
   // ---- 行为：思考等级点选写 prefs、用户页保存 ----
   elements.channelTrigger.dispatch('click', {});
@@ -1012,7 +1101,7 @@ function findItemByText(container, text) {
   assert(!HTML.includes('id="thinkSwitch"') && !script.includes("$('thinkSwitch')"),
     '#4 失效的「显示思考过程」开关与绑定已删除');
   assert(!HTML.includes('id="reasoningParamSwitch"'), '#4 个性化里的思考等级传参开关已删');
-  assert(/buildReplyMeta[\s\S]*?回复耗时/.test(script)
+  assert(/fmtReplyMeta[\s\S]*?回复耗时/.test(script)
     && !script.includes("' = 首字 '"), '#4 只回复总耗时');
   assert(/\.msg-meta\s*\{[^}]*background:\s*var\(--bg\)/.test(css)
     && script.includes("m.className = 'msg-meta'"), '#4 耗时标注移到消息外、背景=聊天背景');
@@ -1031,13 +1120,13 @@ function findItemByText(container, text) {
   assert(script.includes("empty.textContent = '暂无' + atScope"), '#7 空技能也弹「暂无技能」提示');
   assert(!/#skForm\s*\{[^}]*position:\s*fixed/.test(css) && /#skForm\s*\{[^}]*flex:\s*1/.test(css) && /id="skillsBody"[\s\S]*?id="skForm"/.test(HTML),
     '#1 新建技能为 flex:1 覆盖卡片（非 fixed、占顶栏以下并内部滚动，返回栏不被遮挡）');
-  // #8 用户按钮与用户页
-  assert(/#skillBtn, #userBtn\s*\{/.test(css) && !HTML.includes('👤 用户'),
+  // #8 用户按钮与用户页（v1.1.24 #3：四按钮已合并为同一条规则，语义不变）
+  assert(/#userBtn, #skillBtn, #toolBtn, #pluginBtn\s*\{/.test(css) && !HTML.includes('👤 用户'),
     '#8 用户按钮复用技能同款样式，去掉旧图标');
   assert(HTML.includes('关于用户的设定') && !HTML.includes('关于我的设定'), '#8 用户页标题改「关于用户的设定」');
   assert(!/id="userSetting"[^>]*placeholder/.test(HTML), '#8 用户设定输入框注释已删');
   // 版本
-  assert(HTML.includes('id="aboutVersion">1.1.23<'), '版本对齐 1.1.23');
+  assert(HTML.includes('id="aboutVersion">1.1.38<'), '版本对齐 1.1.38');
 
   console.log('\n[31] v1.1.16：讯飞 MaaS 适配（拉取模型走表单当前值）');
   assert(script.includes("fetch(API + '/channels/probe'"), '#1 拉取模型统一走 /channels/probe（表单当前值）');
@@ -1046,8 +1135,193 @@ function findItemByText(container, text) {
   assert(!script.includes('需以 /v1 结尾'), '#1 不再误导成「Base URL 需以 /v1 结尾」');
   assert(script.includes('reasoningParamOn'), '#1 既有思考等级开关未被破坏');
   // 版本
-  assert(HTML.includes('id="aboutVersion">1.1.23<'), '版本对齐 1.1.23');
+  assert(HTML.includes('id="aboutVersion">1.1.38<'), '版本对齐 1.1.38');
 
+  console.log('\n[32] v1.1.24：#1 提示词查看器（测试模式三级开关 / B 预览 / A 历史）+ #2 技能预载 + #3 布局');
+  closeAtList(); closePlusMenu(); closeChannelPicker();
+  // ---- 默认全关 ----
+  assert(elements.devSection.style.display === 'none', '#1 关于页默认不显示测试模式开关区');
+  assert(elements.pmPrompt.style.display === 'none' && elements.pmPromptHist.style.display === 'none',
+    '#1 加号菜单默认隐藏两个提示词入口');
+  assert(HTML.indexOf('id="pmPrompt"') > HTML.indexOf('id="pmPlugin"')
+    && HTML.indexOf('id="pmPromptHist"') > HTML.indexOf('id="pmPrompt"'),
+    '#1 两入口位于「插件」下方，顺序：提示词查看器 → 提示词查看器（历史）');
+  // ---- 连点版本号 7 次解锁 ----
+  prefsPuts.length = 0;
+  for (let i = 0; i < 6; i++) elements.aboutVersion.dispatch('click', {});
+  await sleep(20);
+  assert(!prefsPuts.some(p => p.testMode === true), '#1 连点 6 次不解锁（阈值必须为 7）');
+  elements.aboutVersion.dispatch('click', {});
+  await sleep(20);
+  assert(prefs.testMode === true && prefsPuts.some(p => p.testMode === true),
+    '#1 连点 7 次自动开启测试模式并落盘');
+  assert(elements.devSection.style.display !== 'none', '#1 版本号下方出现三个功能选项');
+  assert(elements.devModeSwitch.className.includes('on'), '#1 测试模式开关显示为开');
+  assert(elements.pmPrompt.style.display === 'none' && elements.pmPromptHist.style.display === 'none',
+    '#1 仅开测试模式时两个入口仍隐藏（各由子开关门控）');
+  // ---- 子开关 B ----
+  prefsPuts.length = 0;
+  elements.devPromptViewerSwitch.dispatch('click', {});
+  await sleep(20);
+  assert(prefs.promptViewerOn === true && prefsPuts.some(p => p.promptViewerOn === true), '#1 B 开关落盘');
+  assert(elements.pmPrompt.style.display !== 'none', '#1 加号菜单出现「提示词查看器」');
+  assert(elements.pmPromptHist.style.display === 'none', '#1 历史入口仍隐藏');
+  // ---- B：预览页 ----
+  elements.pmPrompt.dispatch('click', {});
+  await sleep(30);
+  assert(elements.promptPage.style.display === 'flex', '#1 B 打开提示词查看器页');
+  assert(elements.promptTitle.textContent === '提示词查看器', '#1 B 标题为「提示词查看器」');
+  assert(elements.promptClearBtn.style.display === 'none', '#1 B 不显示清空按钮');
+  assert(elements.promptBody.textAll().includes('操作手册 v1.1.26'),
+    '#1 B 按真实顺序渲染出分段提示词（含操作手册）');
+  const bSegTitles = elements.promptBody.children.map(c => (c.querySelector('.pr-head') || {}).textContent || c.textAll().slice(0, 0));
+  assert(elements.promptBody.children.length >= 5, '#1 B 分段数与后端 segments 一致');
+  assert(elements.promptBody.textAll().includes('智能体设定'), '#1 B 预览含智能体设定段（旧版缺失已修）');
+  assert(!elements.promptBody.textAll().includes('上游实际收到的 messages'),
+    '#1 B 不再出现第二份 messages 视角（v1.1.26 只留一份清单）');
+  assert(/第1部分 · 全局指南/.test(elements.promptBody.textAll()), '#1 B 第1项=全局指南');
+  assert(/第2部分 · 操作手册/.test(elements.promptBody.textAll()), '#1 B 第2项=操作手册');
+  assert(/第3部分 · 智能体设定/.test(elements.promptBody.textAll()), '#1 B 第3项=智能体设定');
+  assert(/第4部分 · 用户设定/.test(elements.promptBody.textAll()), '#1 B 第4项=用户设定');
+  assert(/第5部分 · 思考等级/.test(elements.promptBody.textAll()), '#1 B 第5项=思考等级');
+  assert(/对话上下文（共 \d+ 条，含本轮消息）/.test(elements.promptBody.textAll()),
+    '#1 B 对话合并为一条「对话上下文」（v1.1.27 #1）');
+  assert(elements.promptBody.textAll().includes('【用户】上一问'),
+    '#1 B 合并文本内含【用户】标注');
+  assert(elements.promptBody.textAll().includes('【AI】上一答'),
+    '#1 B 合并文本内含【AI】标注');
+  assert(elements.promptBody.textAll().includes('（虚拟请求'),
+    '#1 B 合并文本末含本轮消息内容');
+  assert(!/指南示例 手册 角色设定 思考等级/.test(elements.promptBody.textAll()),
+    '#1 B 外壳伪装轮（shell）不再重复成段，避免同一内容看两遍');
+  onHardwareBack();
+  assert(elements.promptPage.style.display === 'none', '#1 返回键优先关闭提示词查看器页');
+  // ---- A：历史页 ----
+  prefsPuts.length = 0;
+  elements.devPromptHistorySwitch.dispatch('click', {});
+  await sleep(20);
+  assert(prefs.promptHistoryOn === true && prefsPuts.some(p => p.promptHistoryOn === true), '#1 A 开关落盘');
+  assert(elements.pmPromptHist.style.display !== 'none', '#1 加号菜单出现「提示词查看器（历史）」');
+  promptLog = [
+    { ts: 1, model: 'm1', channel: 'c1', prompt: '第一问', history: [],
+      system: '指南 手册 设定 思考等级', setting: '角色设定示例',
+      segments: [{ title: '全局指南', text: '指南' }, { title: '操作手册', text: '【小助手 App 操作手册 v1.1.26】' }],
+      messages: [{ role: 'system', content: '指南+手册', shell: true }, { role: 'user', content: '第一问' }] },
+    { ts: 2, model: 'm1', channel: 'c1', prompt: '第二问', history: [{ role: 'user', content: '第一问' }],
+      system: '指南 手册 设定 思考等级', setting: '角色设定示例',
+      segments: [{ title: '全局指南', text: '指南' }, { title: '智能体设定', text: '角色设定示例' },
+                 { title: '思考等级', text: '【当前模型思考等级】high（『思考等级传参』已关闭' }],
+      messages: [{ role: 'system', content: '指南+手册+设定', shell: true }, { role: 'user', content: '第一问' },
+                 { role: 'assistant', content: '答一' }, { role: 'user', content: '第二问' }] },
+  ];
+  promptLogGetCount = 0;
+  elements.pmPromptHist.dispatch('click', {});
+  await sleep(30);
+  assert(promptLogGetCount === 1, '#1 A 通过 GET /prompt_log 读取留档');
+  assert(elements.promptTitle.textContent === '提示词查看器（历史）', '#1 A 标题为「提示词查看器（历史）」');
+  assert(elements.promptClearBtn.style.display !== 'none', '#1 A 显示清空按钮');
+  assert(elements.promptBody.children.length === 2, '#1 A 渲染两条历史留档');
+  assert(elements.promptBody.children[0].textAll().includes('第二问'), '#1 A 最新一轮排在最前');
+  const prItem = elements.promptBody.children[0];
+  const prHead = prItem.querySelector('.pr-head');
+  assert(!!prHead, '#1 A 每条留档有可点击的标题行');
+  assert(!prItem.className.includes('open'), '#1 A 条目默认折叠');
+  prHead.dispatch('click', {});
+  assert(prItem.className.includes('open'), '#1 A 点击标题展开该轮详情');
+  assert(prItem.textAll().includes('全局指南') && prItem.textAll().includes('智能体设定'),
+    '#1 A 详情分段与预览同构（顺序一致）');
+  assert(prItem.textAll().includes('对话上下文'), '#1 A 详情含合并对话上下文（v1.1.27 #1）');
+  assert(prItem.textAll().includes('【用户】第一问'),
+    '#1 A 合并上下文内含该轮用户消息');
+  assert(!prItem.textAll().includes('上游实际收到的 messages'),
+    '#1 A 历史与预览同构：同样只有一份清单');
+  assert(prItem.textAll().includes('思考等级传参』已关闭'), '#1 A/#4 思考等级如实标注传参已关闭');
+  // ---- 清空留档 ----
+  elements.promptClearBtn.dispatch('click', {});
+  await sleep(30);
+  assert(promptLog.length === 0, '#1 A 清空走 DELETE /prompt_log');
+  assert((elements.promptBody.innerHTML || '').includes('暂无留档'), '#1 A 清空后显示空态提示');
+  closePromptPage();
+  // ---- v1.1.27 #4：测试模式修改系统提示词 ----
+  assert(elements.devRowPromptOverride.style.display !== 'none', '#4 测试模式下出现「修改系统提示词」入口行');
+  elements.devPromptOverrideBtn.dispatch('click', {});
+  await sleep(30);
+  assert(elements.promptOverridePage.style.display === 'flex', '#4 点击编辑打开修改系统提示词页');
+  elements.poGuide.value = '新指南';
+  elements.poManual.value = '新手册';
+  elements.poSaveBtn.dispatch('click', {});
+  await sleep(20);
+  assert(promptOverride.guide === '新指南' && promptOverride.manual === '新手册' && promptOverride.overridden === true,
+    '#4 保存走 PUT /prompt_override 并持久化覆盖');
+  elements.poResetBtn.dispatch('click', {});
+  await sleep(20);
+  assert(promptOverride.overridden === false, '#4 恢复默认走 DELETE /prompt_override');
+  elements.poBackBtn.dispatch('click', {});
+  await sleep(10);
+  assert(elements.promptOverridePage.style.display === 'none', '#4 返回按钮关闭修改页');
+  onHardwareBack();
+  assert(elements.promptOverridePage.style.display === 'none', '#4 返回键不误关（页已收起）');
+  // ---- 关闭测试模式：开关区 + 两入口全消失 ----
+  prefsPuts.length = 0;
+  elements.devModeSwitch.dispatch('click', {});
+  await sleep(20);
+  assert(prefs.testMode === false && prefs.promptViewerOn === false && prefs.promptHistoryOn === false,
+    '#1 关闭测试模式时两个子开关一并关闭并落盘');
+  assert(elements.pmPrompt.style.display === 'none' && elements.pmPromptHist.style.display === 'none',
+    '#1 关闭测试模式后加号菜单两个入口消失');
+  // ---- 重启后由 /prefs 恢复 ----
+  prefs.testMode = true; prefs.promptViewerOn = true; prefs.promptHistoryOn = true;
+  await loadPrefs();
+  await sleep(20);
+  assert(elements.devSection.style.display !== 'none' && elements.devModeSwitch.className.includes('on'),
+    '#1 重启后测试模式开关区与开关态复现');
+  assert(elements.pmPrompt.style.display !== 'none' && elements.pmPromptHist.style.display !== 'none',
+    '#1 重启后两个菜单入口正确复现');
+  prefs.testMode = false; prefs.promptViewerOn = false; prefs.promptHistoryOn = false;
+  await loadPrefs();
+  await sleep(20);
+  assert(elements.devSection.style.display === 'none' && elements.pmPrompt.style.display === 'none',
+    '#1 prefs 全关时 UI 全隐藏');
+  // ---- #2 技能列表启动预载 + 弹列表节流刷新 ----
+  assert(/loadSkills\(\);/.test(script.slice(script.lastIndexOf('loadTools();'))),
+    '#2 boot 阶段预载技能（修复进入 App 后 @技能 显示「暂无技能」）');
+  await fetch('/skills', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'v1124probe', note: '探针', prompt: '只回答：OK' }) });
+  // 用可控时钟跨过 3s 节流窗口（不改生产代码）
+  const realNow = Date.now;
+  let fakeOffset = 0;
+  Date.now = () => realNow.call(Date) + fakeOffset;
+  const skBase = skillsFetchCount;
+  fakeOffset = 10000;                       // 距上次刷新已超 3s → 应刷新
+  showAtList('', '');
+  await sleep(30);
+  assert(skillsFetchCount > skBase, '#2 弹 @ 列表触发一次后台刷新');
+  assert(elements.atList.style.display === 'block'
+    && elements.atList.children.some(c => (c.innerHTML || '').includes('v1124probe')),
+    '#2 新建技能无需进技能页即可出现在 @ 列表');
+  const skBase2 = skillsFetchCount;
+  showAtList('', '');                        // 仍在同一时间 → 3s 内节流
+  await sleep(20);
+  assert(skillsFetchCount === skBase2, '#2 3s 内重复弹列表不重复请求（节流）');
+  Date.now = realNow;
+  closeAtList();
+  // ---- #3 布局两处 ----
+  assert(/#row \{[\s\S]{0,260}--ctlH: 44px/.test(css),
+    '#2 高度唯一来源 #row --ctlH: 44px');
+  assert(/#inputWrap \{[\s\S]{0,200}height: var\(--ctlH\)/.test(css),
+    '#2 真正的框子 #inputWrap 显式钉高（v1.1.26 根治：此前它无 height，被 textarea+边框撑成 46px）');
+  ['#plusBtn', '#channelTrigger', '#send'].forEach(sel => {
+    const re = new RegExp(sel.replace('#', '#') + ' \\{[\\s\\S]{0,220}height: var\\(--ctlH\\)');
+    assert(re.test(css), '#2 ' + sel + ' 同源 var(--ctlH)（四控件不可能再不等高）');
+  });
+  assert(!/inputEl\.style\.height/.test(script),
+    '#2 禁止再单独改 textarea 高度（旧 bug 根因：改了框内元素、框子没变）');
+  assert(/setControlRowHeight/.test(script) && /setProperty\('--ctlH'/.test(script),
+    '#2 增高走唯一收口 setControlRowHeight → --ctlH（整排一起长）');
+  assert(/#userBtn, #skillBtn, #toolBtn, #pluginBtn \{\s*margin: 6px 6px 0/.test(css),
+    '#3 侧栏四按钮统一 margin 实现严格等距');
+  assert(!/^\s*#(skillBtn|toolBtn|pluginBtn)\s*\{/m.test(css) && !/#skillBtn, #userBtn\s*\{/.test(css),
+    '#3 旧的单独不等距规则已清除');
   console.log('\n' + (failures === 0 ? '全部通过 ✅' : failures + ' 项失败 ❌'));
   process.exit(failures === 0 ? 0 : 1);
 })();
