@@ -135,7 +135,7 @@ public class V1113Test {
                 && p1.contains("\"showTiming\":true") && p1.contains("\"showTokens\":true"));
         ok("改主题不冲掉三开关",
                 body(http(v + "/prefs", "PUT", "{\"theme\":\"dark\"}")).contains("\"showTokens\":true"));
-        ok("/about 版本 1.1.38", body(http(v + "/about", "GET", null)).contains("1.1.38"));
+        ok("/about 版本 1.1.45", body(http(v + "/about", "GET", null)).contains("1.1.45"));
         // 需求⑨：编辑渠道回显密钥（列表接口仍不回显）
         String chAdd = body(http(v + "/channels", "POST",
                 "{\"name\":\"带密钥\",\"baseUrl\":\"http://127.0.0.1:1/v1\",\"apiKey\":\"sk-real-key\",\"model\":\"m1\"}"));
