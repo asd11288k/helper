@@ -233,7 +233,7 @@ public class DTest {
         ok("内置可拉取（只给自身）", http(v + "/channels/builtin/models", "GET", null).contains("内置模型"));
 
         String ab = http(v + "/about", "GET", null);
-        ok("关于页版本号 1.1.27", ab.contains("\"version\":\"1.1.38\""));
+        ok("关于页版本号 1.1.27", ab.contains("\"version\":\"1.1.45\""));
         ok("关于页作者子兮", ab.contains("子兮"));
         ok("关于页项目地址 GitHub", ab.contains("https://github.com/asd11288k/helper"));
 
@@ -365,7 +365,7 @@ public class DTest {
         String esc = http(w + "/tools", "POST", "{\"id\":\"read_file\",\"args\":{\"path\":\"../t.txt\"}}");
         ok("③ 路径 .. 被沙箱拒绝", esc.contains("不允许"));
         String ab2 = http(w + "/about", "GET", null);
-        ok("⑫ 关于页版本 1.1.27", ab2.contains("1.1.38"));
+        ok("⑫ 关于页版本 1.1.27", ab2.contains("1.1.45"));
         ok("⑫ 关于页项目地址", ab2.contains("github.com/asd11288k/helper"));
         fake5.close(); gw3.stop();
         c3f.delete(); s3f.delete(); a3f.delete(); skf.delete(); new File(d3, "prefs.json").delete();
