@@ -105,7 +105,7 @@ const ids = [
   'skillBtn', 'skillsPage', 'skillsBackBtn', 'skillList', 'skillsBody',
   'skForm', 'skFormTitle', 'skName', 'skNote', 'skPrompt', 'skFormTip',
   'addSkillBtn', 'skCancelBtn', 'skSaveBtn',
-  'settingsBody', 'chForm', 'chFormTitle', 'chName', 'chBaseUrl', 'chApiKey', 'chModel',
+  'settingsBody', 'settingsTrack', 'chForm', 'chFormTitle', 'chName', 'chBaseUrl', 'chApiKey', 'chModel',
   'modelCandidateRow', 'modelCandidates', 'chHint',
   'tabModels', 'tabPersonal', 'tabAbout', 'tabBtnModels', 'tabBtnPersonal', 'tabBtnAbout',
   'addChannelBtn', 'pullModelsBtn', 'chCancelBtn', 'chSaveBtn',
@@ -134,6 +134,8 @@ const ids = [
   'promptOverridePage', 'promptOverrideBar', 'poBackBtn', 'promptOverrideBody',
   'poGuide', 'poManual', 'poResetBtn', 'poSaveBtn', 'poHint',
   'devRowPromptOverride', 'devPromptOverrideBtn',
+  // v1.1.41 #2 新增：居中通知弹窗
+  'notifyModal', 'notifyMsg', 'notifyOk', 'notifyCancel',
 ];
 const elements = {};
 ids.forEach(id => { elements[id] = new El(id); });
@@ -178,7 +180,7 @@ let prefsPuts = [];
 let profile = { content: '', enabled: true };
 let promptOverride = { guide: '', manual: '', overridden: false };
 let skills = [];
-const about = { version: '1.1.38', author: '子兮', projectUrl: 'https://github.com/asd11288k/helper' };
+const about = { version: '1.1.45', author: '子兮', projectUrl: 'https://github.com/asd11288k/helper' };
 let settingsMode = 'app';   // 'web' 模拟网页预览版无 /channels 路由（App 独有）
 let lastChatBody = null, lastPrefsPut = null, lastProbeBody = null, lastChannelPut = null;
 let lastBarTheme = null, exitCalls = 0, choicePrefsPut = null;
@@ -420,6 +422,15 @@ elements.sidebar.className = sidebarClassMatch ? sidebarClassMatch[1] : '';
 eval(script);
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+// v1.1.42 #1：前端删除类二次确认已由同步 confirm() 改为异步统一对话框 askConfirm()。
+// 用全局自动确认驱动：检测到「确认框」(取消键可见) 就自动点确定，让 await askConfirm 推进。
+// alert 通知框(notify，取消键隐藏)不自动点，保留各用例对其可见性/文案的断言。
+setInterval(() => {
+  try {
+    const m = elements.notifyModal, c = elements.notifyCancel, ok = elements.notifyOk;
+    if (m && m.style && m.style.display === 'flex' && c && c.style && c.style.display !== 'none') ok.dispatch('click', {});
+  } catch (e) {}
+}, 3);
 let failures = 0;
 function assert(cond, msg) {
   if (cond) console.log('  PASS: ' + msg);
@@ -544,11 +555,18 @@ function findItemByText(container, text) {
   assert(afterClear.messages.length === 0, '后端消息已清空');
   assert(afterClear.name === '翻译大师' && afterClear.setting === '专业翻译', '昵称与设定保留');
 
-  console.log('\n[9] 删除智能体');
+  console.log('\n[9] v1.1.40 删除入口迁移');
+  // [9a] 顶栏「删会话」键不再删除整个智能体（mock 下无 sessions → 走保护分支，语义已迁移）
+  const cntBefore = agents.length;
   elements.delAgentBtn.dispatch('click', {});
   await sleep(20);
-  assert(agents.length === 1, '删除后后端应剩 1 个');
-  assert(elements.agentList.children.length === 1, '列表应剩 1 个');
+  assert(agents.length === cntBefore, '顶栏删除键改为删会话，不再删除整个智能体(#2)');
+  // [9b] 删除智能体新入口 = 拖拽垃圾桶最终调用的 dropDrag(#3)
+  const targetId = agents[0].id;
+  await dropDrag(targetId);
+  await sleep(30);
+  assert(agents.length === cntBefore - 1, '拖拽删除智能体后应减 1(#3)');
+  assert(elements.agentList.children.length === agents.length, '列表与后端同步');
 
   console.log('\n[10] 超长设定不挤掉输入框');
   const longSetting = '你是一个资深中文写作助手，擅长润色与改写，'.repeat(30);
@@ -683,10 +701,11 @@ function findItemByText(container, text) {
   await sleep(20);
   assert(elements.aboutUrl.textContent === 'https://github.com/asd11288k/helper', '项目地址');
   assert(elements.aboutAuthor.textContent === '子兮', '作者为子兮');
-  assert(elements.aboutVersion.textContent === '1.1.38', '版本号为 1.1.38');
+  assert(elements.aboutVersion.textContent === '1.1.45', '版本号为 1.1.45');
 
   console.log('\n[18] 设置页可返回聊天');
   elements.settingsBackBtn.dispatch('click', {});
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.settingsPage.style.display === 'none', '返回后设置页关闭');
 
   console.log('\n[19] ⑤ 侧边栏技能按钮 → 独立技能页 CRUD');
@@ -727,17 +746,21 @@ function findItemByText(container, text) {
   assert(!JSON.stringify(lastChatBody).includes('请润色'), '前端请求体不含技能提示词（后台注入）');
   assert(elements.chat.children.some(d => (d.textContent || '').includes('@润色 这句话')), '用户可见原文');
   elements.skillsBackBtn.dispatch('click', {});
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.skillsPage.style.display === 'none', '技能页可返回聊天');
 
   console.log('\n[21] ⑥ 硬件返回键状态机：逐页返回，聊天页二次确认退出');
   assert(/function onHardwareBack/.test(script), '前端暴露 onHardwareBack');
+  closeNotify();   // v1.1.41 #2：从干净基线开始测返回键逐级回退，清掉前序用例残留的居中通知弹窗
   elements.settingsBtn.dispatch('click', {});
   await sleep(20);
   onHardwareBack();
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.settingsPage.style.display === 'none', '设置页返回→聊天');
   elements.skillBtn.dispatch('click', {});
   await sleep(20);
   onHardwareBack();
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.skillsPage.style.display === 'none', '技能页返回→聊天');
   elements.channelTrigger.dispatch('click', {});
   onHardwareBack();
@@ -774,11 +797,13 @@ function findItemByText(container, text) {
   assert(elements.toolsPage.style.display === 'flex', '工具页打开');
   assert(elements.toolList.children.length === 2, '工具页渲染工具条目（mock 两个）');
   elements.toolsBackBtn.dispatch('click', {});
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.toolsPage.style.display === 'none', '工具页返回');
   elements.pluginBtn.dispatch('click', {});
   assert(elements.pluginsPage.style.display === 'flex', '插件页打开');
   assert(/id="pluginsEmpty"[^>]*>暂无插件/.test(HTML), '插件页为空列表');
   elements.pluginsBackBtn.dispatch('click', {});
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.pluginsPage.style.display === 'none', '插件页返回');
 
   console.log('\n[26] v1.1.11 ⑨⑩⑫：+ 菜单 / @ 列表 / 提供商 / 返回键新页面');
@@ -799,9 +824,11 @@ function findItemByText(container, text) {
   assert(elements.chBaseUrl.value === 'https://api.deepseek.com/v1', '选提供商自动填 Base URL');
   elements.toolBtn.dispatch('click', {});
   onHardwareBack();
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.toolsPage.style.display === 'none', '返回键覆盖工具页');
   elements.pluginBtn.dispatch('click', {});
   onHardwareBack();
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.pluginsPage.style.display === 'none', '返回键覆盖插件页');
 
   console.log('\n[27] v1.1.12：通用三项 / @ 分类 / 密钥眼睛 / 附件名 / 思考计时 / 开关');
@@ -877,7 +904,7 @@ function findItemByText(container, text) {
   assert(script.includes('splitThink') && script.includes('showThinkMode'), '显示思考过程开关');
   // ⑦ 关于页副标题
   assert(HTML.includes('简单对话助手'), '关于页副标题改为简单对话助手');
-  assert(HTML.includes('id="aboutVersion">1.1.38<'), '关于页版本 1.1.38');
+  assert(HTML.includes('id="aboutVersion">1.1.45<'), '关于页版本 1.1.45');
   // ⑩ 模型名逗号相连，支持手动改
   assert(script.includes("modelsToText") && script.includes("join(',')") && script.includes("textToModels"),
     '多模型用英文逗号相连且可手动修改');
@@ -1041,7 +1068,7 @@ function findItemByText(container, text) {
   assert(elements.plusMenu.style.display === 'none', '#19 点输入框收起加号列表');
   assert((document._docListeners['click'] || []).length < beforePlus, '#19 收起后监听被清理');
   // #20 操作手册索引与证据红线（后端由 V1114Test 覆盖，这里确认前端版本）
-  assert(HTML.includes('id="aboutVersion">1.1.38<'), '#20 / 版本对齐 1.1.38');
+  assert(HTML.includes('id="aboutVersion">1.1.45<'), '#20 / 版本对齐 1.1.45');
 
   // ---- 行为：思考等级点选写 prefs、用户页保存 ----
   elements.channelTrigger.dispatch('click', {});
@@ -1062,6 +1089,7 @@ function findItemByText(container, text) {
   await sleep(20);
   assert(profile.content === '叫我子兮', '#17 用户设定已持久化');
   onHardwareBack();
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.userPage.style.display === 'none', '#17 返回键先收用户页');
 
 
@@ -1126,7 +1154,7 @@ function findItemByText(container, text) {
   assert(HTML.includes('关于用户的设定') && !HTML.includes('关于我的设定'), '#8 用户页标题改「关于用户的设定」');
   assert(!/id="userSetting"[^>]*placeholder/.test(HTML), '#8 用户设定输入框注释已删');
   // 版本
-  assert(HTML.includes('id="aboutVersion">1.1.38<'), '版本对齐 1.1.38');
+  assert(HTML.includes('id="aboutVersion">1.1.45<'), '版本对齐 1.1.45');
 
   console.log('\n[31] v1.1.16：讯飞 MaaS 适配（拉取模型走表单当前值）');
   assert(script.includes("fetch(API + '/channels/probe'"), '#1 拉取模型统一走 /channels/probe（表单当前值）');
@@ -1135,7 +1163,7 @@ function findItemByText(container, text) {
   assert(!script.includes('需以 /v1 结尾'), '#1 不再误导成「Base URL 需以 /v1 结尾」');
   assert(script.includes('reasoningParamOn'), '#1 既有思考等级开关未被破坏');
   // 版本
-  assert(HTML.includes('id="aboutVersion">1.1.38<'), '版本对齐 1.1.38');
+  assert(HTML.includes('id="aboutVersion">1.1.45<'), '版本对齐 1.1.45');
 
   console.log('\n[32] v1.1.24：#1 提示词查看器（测试模式三级开关 / B 预览 / A 历史）+ #2 技能预载 + #3 布局');
   closeAtList(); closePlusMenu(); closeChannelPicker();
@@ -1195,6 +1223,7 @@ function findItemByText(container, text) {
   assert(!/指南示例 手册 角色设定 思考等级/.test(elements.promptBody.textAll()),
     '#1 B 外壳伪装轮（shell）不再重复成段，避免同一内容看两遍');
   onHardwareBack();
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.promptPage.style.display === 'none', '#1 返回键优先关闭提示词查看器页');
   // ---- A：历史页 ----
   prefsPuts.length = 0;
@@ -1258,8 +1287,10 @@ function findItemByText(container, text) {
   assert(promptOverride.overridden === false, '#4 恢复默认走 DELETE /prompt_override');
   elements.poBackBtn.dispatch('click', {});
   await sleep(10);
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.promptOverridePage.style.display === 'none', '#4 返回按钮关闭修改页');
   onHardwareBack();
+  await sleep(260);   // v1.1.41 #3：等覆盖页滑出动画结束(220ms)后再断言隐藏
   assert(elements.promptOverridePage.style.display === 'none', '#4 返回键不误关（页已收起）');
   // ---- 关闭测试模式：开关区 + 两入口全消失 ----
   prefsPuts.length = 0;
@@ -1322,6 +1353,40 @@ function findItemByText(container, text) {
     '#3 侧栏四按钮统一 margin 实现严格等距');
   assert(!/^\s*#(skillBtn|toolBtn|pluginBtn)\s*\{/m.test(css) && !/#skillBtn, #userBtn\s*\{/.test(css),
     '#3 旧的单独不等距规则已清除');
+  // ---- v1.1.43 三项 bug 修复防回退断言 ----
+  assert(/\.sess-item \.sdel \{[^}]*border: none/.test(css) && !/\.sess-item \.sdel \{[^}]*border: 1px/.test(css),
+    '#3 会话删除按钮无红色边框');
+  assert(/\.sess-item \.sdel\.armed \{[^}]*color: #fff !important/.test(css),
+    '#3 armed 确认态白字带 !important（否则被 danger !important 盖成红底红字看不见）');
+  assert(/let sdelDisarm = null/.test(script) && /sdelDisarm = disarmDel/.test(script) && /if \(sdelDisarm\)/.test(script),
+    '#3 确认态已登记 + 点任意空白自动取消复位');
+  assert(!/animation: *tabToR|animation: *tabToL|\.swipe-r *\{ *animation/.test(css),
+    '#2 tabToR/tabToL CSS 过渡动画已移除');
+  assert(/function switchTab\(name, snap\)/.test(script) && !/function switchTab\(name, dir\)/.test(script),
+    '#1 switchTab 无 dir(过渡方向)参数，只有 snap(是否吸附)');
+  assert(/tabBtnModels'\)\.addEventListener\('click', \(\) => switchTab\('Models'\)\)/.test(script) && !/tabDirTo/.test(script),
+    '#2 点底栏三按钮=秒切（不再调用 tabDirTo）');
+  assert(!/settingsPageEl\.style\.display = 'none'; clearX\(settingsPageEl\); sidebarSetOpen\(true\)/.test(script),
+    '#1 设置页滑出返回聊天后不再自动展开智能体列表');
+  // ---- v1.1.45 #1 设置分区「常驻物理并排轨道」防回退断言（取代 v1.1.44 的临时拼轨道方案）----
+  assert(/<div id="settingsTrack">/.test(HTML), '#1 DOM 存在常驻轨道 #settingsTrack');
+  assert(/#settingsBody \{[^}]*overflow: hidden/.test(css) && !/#settingsBody \{[^}]*overflow-y: auto/.test(css),
+    '#1 #settingsBody 改为纯视口(overflow:hidden)，不再自带滚动（避免隐式横向滚动与 translateX 打架）');
+  assert(!/#settingsBody \{[^}]*padding/.test(css),
+    '#1 padding 已从 #settingsBody 移走（容器带 padding 平移会在两页接缝漏白 → 就是"两页分开"的观感根因）');
+  assert(/\.sec \{[^}]*flex: 0 0 100%/.test(css) && /\.sec \{[^}]*overflow-y: auto/.test(css) && /\.sec \{[^}]*padding/.test(css),
+    '#1 每页各占一屏宽、自己纵向滚动、自己带 padding（三页首尾物理相连）');
+  assert(/#settingsTrack \{[^}]*display: flex/.test(css), '#1 轨道为 flex 横向布局');
+  assert(/function trackPlace\(px, anim\)/.test(script) && /trackEl\(\)/.test(script) && /function settingsIdx\(\)/.test(script),
+    '#1 轨道定位三原语齐备（trackPlace/trackEl/settingsIdx）');
+  assert(/trackPlace\(Math\.max\(lo, Math\.min\(hi, swBasePx \+ dx\)\), false\)/.test(script),
+    '#1 拖拽期轨道位移=基准+手指增量、1:1 跟手且无过渡(anim=false)');
+  assert(/swBasePx = \(swLayer === 'settings'\) \? \(-settingsIdx\(\) \* settingsW\(\)\) : 0/.test(script),
+    '#1 touchstart 记录轨道基准位移（拖起即从当前格起步）');
+  assert(/switchTab\(SETTINGS_TABS\[ni\], true\)/.test(script),
+    '#1 松手吸附到邻格或弹回本格（唯一有动画的路径是吸附）');
+  assert(!/tabPeekStart|tabPeekRestore|tabPeek/.test(script),
+    '#1 旧「临时拼 flex 轨道」方案已彻底移除（无残留分支）');
   console.log('\n' + (failures === 0 ? '全部通过 ✅' : failures + ' 项失败 ❌'));
   process.exit(failures === 0 ? 0 : 1);
 })();
